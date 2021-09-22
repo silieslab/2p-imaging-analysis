@@ -12,14 +12,17 @@ two functions in "stim_functions" still need to be implemented: readStimInformat
 """
 
 import os
-import copy
-import numpy as np
-import matplotlib.pyplot as plt
-import pandas as pd
-import sys
-from core_functions_2p_imaging_analysis import load_movie, get_stim_xml_params
+from core_functions_2p_imaging_analysis import load_movie, get_stim_xml_params,organize_extraction_params,get_epochs_identity
+from roi_selection_functions import run_ROI_selection
+
+#%% Messages to developer
+
+print('Message to developer: ')
+print('Pack the user parameters un a run-script')
 
 #%% User parameters
+
+# Fly-specific selection parameters
 experiment = 'Mi1_GluCla_Tm3_suff_exp'
 current_exp_ID = '20210111_jv_fly4'
 current_t_series ='TSeries-001'
@@ -28,8 +31,19 @@ save_folder_geno = 'PosCnt'
 Age = '2'
 Sex = 'm'
 
+
+# ROI selection/extraction parameters
+time_series_stack = 'Mot_corr_stack.tif'# 'Raw_stack.tif' 'Mot_corr_stack.tif' # It needs to be a tif stack.
+roi_extraction_type = 'manual' #  'transfer' 'manual' 
+transfer_type = 'minimal' # 'minimal' (so far the single option)
+transfer_data_name = '20201213_seb_fly4-TSeries-fly4-001_manual.pickle'
+
+use_avg_data_for_roi_extract = False
+use_other_series_roiExtraction = False # ROI selection video
+roiExtraction_tseries = 'TSeries-fly1-001'
+
+# Saving options
 save_data = True
-time_series_stack = 'Mot_corr_stack.tif'# 'Raw_stack.tif' 'Mot_corr_stack.tif'
 
 #%% Auto-setting of some other directories
 dataFolder = r'G:\SebastianFilesExternalDrive\Science\PhDAGSilies\2pData Python_data'
@@ -45,6 +59,7 @@ trash_folder = os.path.join(dataFolder, 'Trash')
 #%% Auto-setting of some variables
 dataDir = os.path.join(alignedDataDir, current_exp_ID, current_t_series)
 current_movie_ID = current_exp_ID + '-' + current_t_series
+experiment_conditions = {'Genotype' : Genotype, 'Age': Age, 'Sex' : Sex,'FlyID' : current_exp_ID, 'MovieID': current_movie_ID}
 
 #%% Load of aligned data
 dataDir = os.path.join(alignedDataDir, current_exp_ID, current_t_series)
@@ -55,10 +70,19 @@ mean_image = time_series.mean(0)
 imaging_information,stimulus_information, stimType, rawStimData,stimInputFile = get_stim_xml_params(dataDir, stimInputDir)
 
 #%% Epochs sorting and identity assignment. Adding info to "stimulus_information"
-stimulus_information = get_epochs_identity(stimulus_information,stimType, rawStimData,stimInputFile,stimInputData)
+stimulus_information = get_epochs_identity(imaging_information,stimulus_information,stimType, rawStimData,stimInputFile)
 
 
 #%%  ROI selection
+
+extraction_params = organize_extraction_params(roi_extraction_type,current_t_series=current_t_series,current_exp_ID=current_exp_ID,
+                               alignedDataDir=alignedDataDir,stimInputDir=stimInputDir,use_other_series_roiExtraction = use_other_series_roiExtraction,
+                               use_avg_data_for_roi_extract = use_avg_data_for_roi_extract,roiExtraction_tseries=roiExtraction_tseries,
+                               transfer_data_n = transfer_data_name,transfer_data_store_dir = saveOutputDir,transfer_type = transfer_type,
+                               imaging_information=imaging_information,experiment_conditions=experiment_conditions)
+    
+(cat_masks, cat_names, roi_masks, all_rois_image, rois, threshold_dict) = run_ROI_selection(extraction_params,time_series_stack,image_to_select=mean_image)
+    
 #%%  Background substraction
 #%%  Data sorting (epochs sorting, including subepochs trigger by tau)
 #%%  Trial averaging (TA)
