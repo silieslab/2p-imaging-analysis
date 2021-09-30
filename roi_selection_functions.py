@@ -9,6 +9,10 @@ import math
 import numpy as np
 import matplotlib.pyplot as plt
 from roipoly import RoiPoly
+from roi_class import ROI_bg
+import copy
+from tkinter import filedialog
+import _pickle as cPickle
 
 
 def select_regions(image_to_select_from, image_cmap ="gray",pause_t=7,
@@ -54,10 +58,7 @@ def select_regions(image_to_select_from, image_cmap ="gray",pause_t=7,
         # plt.waitforbuttonpress()
         # plt.pause(pause_t)
         if ask_name:
-            try:
-                mask_name = raw_input("\nEnter the ROI name:\n>> ") # Python 2.X
-            except:
-                mask_name = input("\nEnter the ROI name:\n>> ") # Python 3.X
+            mask_name = input("\nEnter the ROI name:\n>> ") # Python 3.X
             
         else:
             mask_name = iROI
@@ -75,10 +76,7 @@ def select_regions(image_to_select_from, image_cmap ="gray",pause_t=7,
         
         
         roi_number += 1
-        try:
-            signal = raw_input("\nPress k for exiting program, otherwise press enter") # Python 2.X
-        except:
-            signal = input("\nPress k for exiting program, otherwise press enter") # Python 3.X
+        signal = input("\nPress k for exiting program, otherwise press enter") # Python 3.X
         
         if (signal == 'k\r'):
             stopsignal = 1
@@ -158,7 +156,7 @@ def run_roi_transfer(transfer_data_path, transfer_type,experiment_info=None,
 
 
 
-def run_ROI_selection(extraction_params, stack, image_to_select=None):
+def run_ROI_selection(extraction_params, stack,stimulus_information, imaging_information, image_to_select=None):
     """
     THIS IS DOING THIS
     Parameters
@@ -203,6 +201,11 @@ def run_ROI_selection(extraction_params, stack, image_to_select=None):
                                 imaging_info=extraction_params['imaging_information'])
         
         return cat_masks, cat_names, None, None, rois, None
+    
+    #  Juan doing some magic here:
+    elif extraction_params['type'] == 'cluster_analysis': 
+        stimulus_information = stimulus_information
+        imaging_information = imaging_information
     
     else:
        raise TypeError('ROI selection type not understood.') 

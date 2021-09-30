@@ -8,6 +8,8 @@ Created on Wed Sep 15 16:38:23 2021
 import re
 import os
 import numpy as np
+from itertools import islice
+import glob
 
 
 #%% Functions
@@ -38,7 +40,7 @@ def readStimOut(stimOutFile, skipHeader):
         in the same fashion as they appear in the stimulus output file.
     """
     # skip the first line since it is a file path
-    rawStimData = numpy.genfromtxt(stimOutFile, dtype='float',
+    rawStimData = np.genfromtxt(stimOutFile, dtype='float',
                                    skip_header=skipHeader,delimiter=',') # Seb: delimiter = ',' for _stimulus_ouput from 2pstim
     # also get the file path
     # do not mix it with numpy
@@ -118,7 +120,11 @@ def readStimInformation(stimType, stimInputDir):
     """
 
     stimType = stimType.split('/')[-1] # Seb: \\ to / 
-    stimInputFile = glob.glob(os.path.join(stimInputDir, stimType))[0]
+    try:
+        stimInputFile = glob.glob(os.path.join(stimInputDir, stimType))[0]
+    except IOError:
+        print("Error: can\'t find file")
+            
     stimInputData = {}
     with open(stimInputFile) as file:
         for line in file:

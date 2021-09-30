@@ -5,6 +5,11 @@ Created on Wed Sep 22 12:54:12 2021
 @author: smolina and Burak Gur
 """
 
+import numpy as np
+import seaborn as sns
+import matplotlib.pyplot as plt
+from warnings import warn
+import copy
 
 class ROI_bg: 
     """A region of interest from an image sequence """
@@ -302,3 +307,55 @@ class ROI_bg:
         self.ND_TF_curve_resp = self.max_resp_all_epochs[req_epochs_ND]
         
         self.BF = self.stim_info['epoch_frequency'][max_grating_epoch]
+        
+#%% Other functions     
+        
+def movingaverage(interval, window_size):
+    window = np.ones(int(window_size))/float(window_size)
+    return np.convolve(interval, window, 'same')
+
+def generate_ROI_instances(roi_masks, category_masks, category_names, source_im,
+                           experiment_info = None, imaging_info =None):
+    """ Generates ROI_bg instances and adds the category information.
+
+    Parameters
+    ==========
+    roi_masks : list
+        A list of ROI masks in the form of numpy arrays.
+        
+    category_masks: list
+        A list of category masks in the form of numpy arrays.
+        
+    category_names: list
+        A list of category names.
+        
+    source_im : numpy array
+        An array containing a representation of the source image where the 
+        ROIs are found.
+    
+    Returns
+    =======
+    
+    rois : list 
+        A list containing instances of ROI_bg
+    """
+    # Seb: coommented this    
+    # if type(roi_masks) == sima.ROI.ROIList:
+    #     roi_masks = list(map(lambda roi : np.array(roi)[0,:,:], roi_masks))
+        
+    # Generate instances of ROI_bg from the masks
+    rois = map(lambda mask : ROI_bg(mask, experiment_info = experiment_info,
+                                    imaging_info=imaging_info), roi_masks)
+
+    def assign_region(roi, category_masks, category_names):
+        """ Finds which layer the current mask is in"""
+        for iLayer, category_mask in enumerate(category_masks):
+            if np.sum(roi.mask*category_mask):
+                roi.setCategory(category_names[iLayer])
+    
+    # Add information            
+    for roi in rois:
+        assign_region(roi, category_masks, category_names)
+        roi.setSourceImage(source_im)
+        
+    return rois

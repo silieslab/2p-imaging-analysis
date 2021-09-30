@@ -9,7 +9,7 @@ Created on Wed Sep 15 15:44:39 2021
 import os
 import glob
 from skimage import io
-import matplotlib.plot as plt
+import matplotlib.pyplot as plt
 import numpy as np
 from xml_functions import getFramePeriod,getMicRelativeTime,getLayerPosition,getPixelSize
 from stim_functions import readStimOut, readStimInformation
@@ -19,23 +19,17 @@ from epoch_functions import getEpochCount, divideEpochs, divide_all_epochs
 
 
 #%% Functions
-def load_movie (dataDir,stimInputDir,stack):
+def load_movie (dataDir,stack):
     
 
     # Generate necessary directories for figures
     current_t_series=os.path.basename(dataDir)
     
     # Load movie, get stimulus and imaging information
-    try: 
+    movie_path = os.path.join(dataDir, stack)
+    time_series = io.imread(movie_path)
 
-        movie_path = os.path.join(dataDir, stack)
-        time_series = io.imread(movie_path)
-    except IOError:
-        movie_path = os.path.join(dataDir, '{t_name}_{stack}'.format(t_name=current_t_series, stack=stack))
-        time_series = io.imread(movie_path)
-        
 
-    
     return time_series
 
 
@@ -239,87 +233,4 @@ def organize_extraction_params(extraction_type,
     return extraction_params
 
 
-def run_ROI_selection(extraction_params, stack, image_to_select=None):
-    """
-    THIS IS DOING THIS
-    Parameters
-    ==========
-   
-    XXXXXXXXXXX
-        
-    Returns
-    =======
- 
-    XXXXXXXXXXX  
-    
 
-    """
-    # Categories can be used to classify ROIs depending on their location
-    # Backgroud mask (named "bg") will be used for background subtraction
-    plt.close('all')
-    plt.style.use("default")
-    print('\n\nSelect categories and background')
-    [cat_masks, cat_names] = select_regions(image_to_select, 
-                                            image_cmap="viridis",
-                                            pause_t=8)
-    
-    # have to do different actions depending on the extraction type
-    if extraction_params['type'] == 'manual':
-        print('\n\nSelect ROIs')
-        [roi_masks, roi_names] = select_regions(image_to_select, 
-                                                image_cmap="viridis",
-                                                pause_t=4.5,
-                                                ask_name=False)
-        all_rois_image = generate_roi_masks_image(roi_masks,
-                                                  np.shape(image_to_select))
-        
-        return cat_masks, cat_names, roi_masks, all_rois_image, None, None
-            
-    elif extraction_params['type'] == 'SIMA-STICA': 
-        # Need the time series and information about the video to be extracted
-        (time_series, stimulus_information,imaging_information) = \
-            pre_processing_movie (extraction_params['series_path'],
-                                  extraction_params['stim_input_path'], stack)
-        
-        # A trial averaged version of the video can be used for extraction 
-        # since it may decrease the noise. Yet it can introduce artifacts
-        # between the epochs
-        if extraction_params['use_trial_avg_video']:
-            (avg_video, _, _) = \
-                separate_trials_video(time_series,stimulus_information,
-                                      imaging_information['frame_rate'])
-            sima_dataset = generate_avg_movie(extraction_params['series_path'], 
-                                              stimulus_information,
-                                              avg_video)
-        else:
-            movie = np.zeros(shape=(time_series.shape[0],1,time_series.shape[1],
-                                time_series.shape[2],1))
-            movie[:,0,:,:,0] = time_series
-            b = sima.Sequence.create('ndarray',movie)
-            sima_dataset = sima.ImagingDataset([b],None)
-        
-        # We need a certain range of areas for rois 
-        area_max_micron = extraction_params['area_max_micron']
-        area_min_micron = extraction_params['area_min_micron']
-        area_max = int(math.pow(math.sqrt(area_max_micron) / \
-                                imaging_information['pixel_size'], 2))
-        area_min = int(math.pow(math.sqrt(area_min_micron) / \
-                                imaging_information['pixel_size'], 2))
-        [roi_masks, all_rois_image] = find_clusters_STICA(sima_dataset,
-                                                          area_min,
-                                                          area_max)
-        threshold_dict = {'SNR': 0.75,'reliability': 0.4}
-        
-        return cat_masks, cat_names, roi_masks, all_rois_image, None, threshold_dict
-    
-    elif extraction_params['type'] == 'transfer':
-        
-        rois = run_roi_transfer(extraction_params['transfer_data_path'],
-                                extraction_params['transfer_type'],
-                                experiment_info=extraction_params['experiment_conditions'],
-                                imaging_info=extraction_params['imaging_information'])
-        
-        return cat_masks, cat_names, None, None, rois, None
-    
-    else:
-       raise TypeError('ROI selection type not understood.') 
