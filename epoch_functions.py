@@ -241,7 +241,7 @@ def divideEpochs(rawStimData, epochCount, isRandom, framePeriod,
     fullEpochSeq = []
 
     if isRandom == 0:
-        fullEpochSeq = range(epochCount)
+        fullEpochSeq = list(range(epochCount))
         # if the key is zero, that means isRandom is 0
         # this is for compatibitibility and
         # to make unified workflow with isRandom == 1
@@ -252,7 +252,7 @@ def divideEpochs(rawStimData, epochCount, isRandom, framePeriod,
         # important thing is its length
         # it's set to 3 since trials will be sth like: 0, X
         # if incNextEpoch is True, then it will be like : 0,X,0
-        fullEpochSeq = range(2)
+        fullEpochSeq = list(range(2))
         for epoch in range(1, epochCount):
             # add epoch numbers to the dictionary
             # do not add the first epoch there

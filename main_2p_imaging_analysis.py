@@ -86,12 +86,12 @@ extraction_params = organize_extraction_params(roi_extraction_type,current_t_ser
                                transfer_data_n = transfer_data_name,transfer_data_store_dir = saveOutputDir,transfer_type = transfer_type,
                                imaging_information=imaging_information,experiment_conditions=experiment_conditions)
     
-(cat_masks, cat_names, roi_masks, all_rois_image, rois, threshold_dict) = run_ROI_selection(extraction_params,time_series_stack,stimulus_information, imaging_information,image_to_select=mean_image)
+ROI_selection_dict = run_ROI_selection(extraction_params,time_series_stack,stimulus_information, imaging_information,image_to_select=mean_image)
 
 #%%  Creation of ROI class
-if rois == None:
-    del rois
-    rois = generate_ROI_instances(roi_masks, cat_masks, cat_names,
+if ROI_selection_dict['rois'] == None:
+    del ROI_selection_dict['rois']
+    rois = generate_ROI_instances(ROI_selection_dict,
                                           mean_image, 
                                           experiment_info = experiment_conditions, 
                                           imaging_info =imaging_information)

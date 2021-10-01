@@ -314,7 +314,7 @@ def movingaverage(interval, window_size):
     window = np.ones(int(window_size))/float(window_size)
     return np.convolve(interval, window, 'same')
 
-def generate_ROI_instances(roi_masks, category_masks, category_names, source_im,
+def generate_ROI_instances(ROI_selection_dict, source_im,
                            experiment_info = None, imaging_info =None):
     """ Generates ROI_bg instances and adds the category information.
 
@@ -338,7 +338,12 @@ def generate_ROI_instances(roi_masks, category_masks, category_names, source_im,
     
     rois : list 
         A list containing instances of ROI_bg
+
+
     """
+    roi_masks = ROI_selection_dict['roi_masks']
+    category_masks = ROI_selection_dict['cat_masks']
+    category_names = ROI_selection_dict['cat_names']
     # Seb: coommented this    
     # if type(roi_masks) == sima.ROI.ROIList:
     #     roi_masks = list(map(lambda roi : np.array(roi)[0,:,:], roi_masks))

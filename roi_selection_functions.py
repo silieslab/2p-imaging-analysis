@@ -171,6 +171,9 @@ def run_ROI_selection(extraction_params, stack,stimulus_information, imaging_inf
     
 
     """
+    
+    # Initialyze dictionary
+    ROI_selection_dict = {}
     # Categories can be used to classify ROIs depending on their location
     # Backgroud mask (named "bg") will be used for background subtraction
     plt.close('all')
@@ -179,6 +182,10 @@ def run_ROI_selection(extraction_params, stack,stimulus_information, imaging_inf
     [cat_masks, cat_names] = select_regions(image_to_select, 
                                             image_cmap="viridis",
                                             pause_t=8)
+    
+    ROI_selection_dict['cat_masks'] = cat_masks
+    ROI_selection_dict['cat_names'] = cat_names
+    ROI_selection_dict['rois'] = None
     
     # have to do different actions depending on the extraction type
     if extraction_params['type'] == 'manual':
@@ -190,7 +197,12 @@ def run_ROI_selection(extraction_params, stack,stimulus_information, imaging_inf
         all_rois_image = generate_roi_masks_image(roi_masks,
                                                   np.shape(image_to_select))
         
-        return cat_masks, cat_names, roi_masks, all_rois_image, None, None
+        ROI_selection_dict['roi_masks'] = roi_masks
+        ROI_selection_dict['roi_names'] = roi_names
+        ROI_selection_dict['all_rois_image'] = all_rois_image
+        
+        return ROI_selection_dict
+        #return cat_masks, cat_names, roi_masks, all_rois_image, None, None
             
     
     elif extraction_params['type'] == 'transfer':
@@ -200,7 +212,9 @@ def run_ROI_selection(extraction_params, stack,stimulus_information, imaging_inf
                                 experiment_info=extraction_params['experiment_conditions'],
                                 imaging_info=extraction_params['imaging_information'])
         
-        return cat_masks, cat_names, None, None, rois, None
+        ROI_selection_dict['rois'] = rois
+        return ROI_selection_dict
+        #return cat_masks, cat_names, None, None, rois, None
     
     #  Juan doing some magic here:
     elif extraction_params['type'] == 'cluster_analysis': 
