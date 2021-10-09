@@ -348,9 +348,9 @@ def generate_ROI_instances(ROI_selection_dict, source_im,
     # if type(roi_masks) == sima.ROI.ROIList:
     #     roi_masks = list(map(lambda roi : np.array(roi)[0,:,:], roi_masks))
         
-    # Generate instances of ROI_bg from the masks
-    rois = map(lambda mask : ROI_bg(mask, experiment_info = experiment_info,
-                                    imaging_info=imaging_info), roi_masks)
+    # Generate instances of ROI_bg (class) from the masks
+    rois = list(map(lambda mask : ROI_bg(mask, experiment_info = experiment_info,
+                                    imaging_info=imaging_info), roi_masks))
 
     def assign_region(roi, category_masks, category_names):
         """ Finds which layer the current mask is in"""
@@ -364,3 +364,304 @@ def generate_ROI_instances(ROI_selection_dict, source_im,
         roi.setSourceImage(source_im)
         
     return rois
+
+def separate_trials_ROI(time_series,rois,stimulus_information,frameRate,moving_avg, bins, 
+                           df_method = None, df_first = True,
+                           max_resp_trial_len = 'max'):
+    """ Separates trials epoch-wise into big lists of whole traces, response traces
+    and baseline traces. Adds responses and whole traces into the ROI_bg 
+    instances.
+    
+    Parameters
+    ==========
+    time_series : numpy array
+        Time series in the form of: frames x m x n (m & n are pixel dimensions)
+    
+    trialCoor : dict
+        Each key is an epoch number. Corresponding value is a list.
+        Each term in this list is a trial of the epoch. Trials consist of 
+        previous baseline epoch _ stimulus epoch _ following baseline epoch
+        (if there is a baseline presentation)
+        These terms have the following str: [[X, Y], [Z, D]] where
+        first term is the trial beginning (first of first) and end
+        (second of first), and second term is the baseline start
+        (first of second) and end (second of second) for that trial.
+    
+    rois : list
+        A list of ROI_bg instances.
+        
+    stimulus_information : list 
+        Stimulus related information is stored here.
+        
+    frameRate : float
+        Image acquisiton rate.
+        
+    df_method : str
+        Method for calculating dF/F defined in the ROI_bg class.
+        
+    plotting: bool
+        If the user wants to visualize the masks and the traces for clusters.
+        
+    Returns
+    =======
+    wholeTraces_allTrials_ROIs : list containing np arrays
+        Epoch list of time traces including all trials in the form of:
+            baseline epoch - stimulus epoch - baseline epoch
+            
+    respTraces_allTrials_ROIs : list containing np arrays
+        Epoch list of time traces including all trials in the form of:
+            -stimulus epoch-
+
+    respTraces_allTrials_ROIs_raw : list containing np arrays
+        Epoch list of raw time traces including all trials in the form of:
+            -stimulus epoch-
+        
+    baselineTraces_allTrials_ROIs : list containing np arrays
+        Epoch list of time traces including all trials in the form of:
+            -baseline epoch-
+            
+    """
+    wholeTraces_allTrials_ROIs = {}
+    respTraces_allTrials_ROIs = {}
+    respTraces_allTrials_ROIs_raw = {}
+    baselineTraces_allTrials_ROIs = {}
+    
+    # dF/F calculation
+    for iROI, roi in enumerate(rois):
+        roi.raw_trace = time_series[:,roi.mask].mean(axis=1)
+        roi.calculateDf(method=df_method,moving_avg = True, bins = 3)
+        roi.base_dur = [] # Initialize baseline duration here for upcoming analysis
+        
+            
+    trialCoor = stimulus_information['trial_coordinates']
+
+    # Trial averaging by looping through epochs and trials
+    for iEpoch in trialCoor:
+        currentEpoch = trialCoor[iEpoch]
+        current_epoch_dur = stimulus_information['duration'][iEpoch]
+        trial_numbers = len(currentEpoch)
+        trial_lens = []
+        resp_lens = []
+        base_lens = []
+        for curr_trial_coor in currentEpoch:
+            current_trial_length = curr_trial_coor[0][1]-curr_trial_coor[0][0]
+            trial_lens.append(current_trial_length)
+            
+            baselineStart = curr_trial_coor[1][0]
+            baselineEnd = curr_trial_coor[1][1]
+            base_len = baselineEnd - baselineStart
+            
+            base_lens.append(base_len) 
+            
+            resp_start = curr_trial_coor[0][0]+base_len
+            resp_end = curr_trial_coor[0][1]-base_len
+            resp_lens.append(resp_end-resp_start)
+        
+        trial_len =  min(trial_lens)
+        resp_len = min(resp_lens)
+        base_len = min(base_lens)
+        
+        if not((max_resp_trial_len == 'max') or \
+               (current_epoch_dur < max_resp_trial_len)):
+            resp_len = int(round(frameRate * max_resp_trial_len))+1
+            
+        wholeTraces_allTrials_ROIs[iEpoch] = {}
+        respTraces_allTrials_ROIs[iEpoch] = {}
+        respTraces_allTrials_ROIs_raw[iEpoch] = {}
+        baselineTraces_allTrials_ROIs[iEpoch] = {}
+   
+        for iCluster, roi in enumerate(rois):
+            
+            # Baseline epoch is presented only when random value = 0 and 1 
+            if stimulus_information['random'] == 1:
+                wholeTraces_allTrials_ROIs[iEpoch][iCluster] = np.zeros(shape=(trial_len,
+                                                         trial_numbers))
+                respTraces_allTrials_ROIs[iEpoch][iCluster] = np.zeros(shape=(resp_len,
+                                                         trial_numbers))
+            
+                respTraces_allTrials_ROIs_raw[iEpoch][iCluster] = np.zeros(shape=(resp_len,
+                                                         trial_numbers))
+
+                baselineTraces_allTrials_ROIs[iEpoch][iCluster] = np.zeros(shape=(base_len,
+                                                         trial_numbers))
+            elif stimulus_information['random'] == 0:
+                wholeTraces_allTrials_ROIs[iEpoch][iCluster] = np.zeros(shape=(trial_len,
+                                                         trial_numbers))
+                respTraces_allTrials_ROIs[iEpoch][iCluster] = np.zeros(shape=(trial_len,
+                                                         trial_numbers))
+                respTraces_allTrials_ROIs_raw[iEpoch][iCluster] = np.zeros(shape=(trial_len,
+                                                         trial_numbers))                               
+                base_len  = np.shape(wholeTraces_allTrials_ROIs\
+                                     [stimulus_information['baseline_epoch']]\
+                                     [iCluster])[0]
+                baselineTraces_allTrials_ROIs[iEpoch][iCluster] = np.zeros(shape=(int(frameRate*1.5),
+                                   trial_numbers))
+            else:
+                wholeTraces_allTrials_ROIs[iEpoch][iCluster] = np.zeros(shape=(trial_len,
+                                                         trial_numbers))
+                respTraces_allTrials_ROIs[iEpoch][iCluster] = np.zeros(shape=(trial_len,
+                                                         trial_numbers))
+                respTraces_allTrials_ROIs_raw[iEpoch][iCluster] = np.zeros(shape=(trial_len,
+                                                         trial_numbers))
+                baselineTraces_allTrials_ROIs[iEpoch][iCluster] = None
+            
+            for trial_num , current_trial_coor in enumerate(currentEpoch):
+                
+                if stimulus_information['random'] == 1:
+                    trialStart = current_trial_coor[0][0]
+                    trialEnd = current_trial_coor[0][1]
+                    
+                    baselineStart = current_trial_coor[1][0]
+                    baselineEnd = current_trial_coor[1][1]
+                    
+                    respStart = current_trial_coor[1][1]
+                    epochEnd = current_trial_coor[0][1]
+                    
+                    if df_first:
+                        roi_whole_trace = roi.df_trace[trialStart:trialEnd]
+                        roi_resp = roi.df_trace[respStart:epochEnd]
+                        roi_resp_raw = roi.raw_trace[respStart:epochEnd]
+                    else:
+                        roi_whole_trace = roi.raw_trace[trialStart:trialEnd]
+                        roi_resp = roi.raw_trace[respStart:epochEnd]
+                        roi_resp_raw = roi.raw_trace[respStart:epochEnd]
+                    try:
+                        wholeTraces_allTrials_ROIs[iEpoch][iCluster][:,trial_num]= roi_whole_trace[:trial_len]
+                    except ValueError:
+                        new_trace = np.full((trial_len,),np.nan)
+                        new_trace[:len(roi_whole_trace)] = roi_whole_trace.copy()
+                        wholeTraces_allTrials_ROIs[iEpoch][iCluster][:,trial_num]= new_trace
+                            
+                    respTraces_allTrials_ROIs[iEpoch][iCluster][:,trial_num]= roi_resp[:resp_len]
+                    respTraces_allTrials_ROIs_raw[iEpoch][iCluster][:,trial_num]= roi_resp_raw[:resp_len]
+                    baselineTraces_allTrials_ROIs[iEpoch][iCluster][:,trial_num]= roi_whole_trace[:base_len]
+                elif stimulus_information['random'] == 0:
+                    
+                    # If the sequence is non random  the trials are just separated without any baseline
+                    trialStart = current_trial_coor[0][0]
+                    trialEnd = current_trial_coor[0][1]
+                    
+                    if df_first:
+                        roi_whole_trace = roi.df_trace[trialStart:trialEnd]
+                        roi_whole_trace_raw = roi.raw_trace[trialStart:trialEnd]
+                    else:
+                        roi_whole_trace = roi.raw_trace[trialStart:trialEnd]
+                        roi_whole_trace_raw = roi.raw_trace[trialStart:trialEnd]
+                        
+                    
+                    if iEpoch == stimulus_information['baseline_epoch']:
+                        baseline_trace = roi_whole_trace[:base_len]
+                        baseline_trace = baseline_trace[-int(frameRate*1.5):]
+                        baselineTraces_allTrials_ROIs[iEpoch][iCluster][:,trial_num]= baseline_trace
+                    else:
+                        baselineTraces_allTrials_ROIs[iEpoch][iCluster]\
+                            [:,trial_num]= baselineTraces_allTrials_ROIs\
+                            [stimulus_information['baseline_epoch']][iCluster]\
+                            [:,trial_num]
+                    
+                    try:
+                        wholeTraces_allTrials_ROIs[iEpoch][iCluster][:,trial_num]= roi_whole_trace[:trial_len]
+                        respTraces_allTrials_ROIs[iEpoch][iCluster][:,trial_num]= roi_whole_trace[:trial_len]
+                        respTraces_allTrials_ROIs_raw[iEpoch][iCluster][:,trial_num]= roi_whole_trace_raw[:trial_len]
+                    except ValueError:
+                        new_trace = np.full((trial_len,),np.nan)
+                        new_trace[:len(roi_whole_trace)] = roi_whole_trace.copy()
+                        new_trace_raw = np.full((trial_len,),np.nan)
+                        new_trace_raw[:len(roi_whole_trace_raw)] = roi_whole_trace_raw.copy()
+                        wholeTraces_allTrials_ROIs[iEpoch][iCluster][:,trial_num]= new_trace
+                        respTraces_allTrials_ROIs[iEpoch][iCluster][:,trial_num]= new_trace
+                        respTraces_allTrials_ROIs_raw[iEpoch][iCluster][:,trial_num]= new_trace_raw
+                        
+                else:
+                    # If the sequence is all random the trials are just separated without any baseline
+                    trialStart = current_trial_coor[0][0]
+                    trialEnd = current_trial_coor[0][1]
+                    
+                    if df_first:
+                        roi_whole_trace = roi.df_trace[trialStart:trialEnd]
+                        roi_whole_trace_raw = roi.raw_trace[trialStart:trialEnd]
+                    else:
+                        roi_whole_trace = roi.raw_trace[trialStart:trialEnd]
+                        roi_whole_trace_raw = roi.raw_trace[trialStart:trialEnd]
+                    
+                    try:
+                        wholeTraces_allTrials_ROIs[iEpoch][iCluster][:,trial_num]= roi_whole_trace[:trial_len]
+                        respTraces_allTrials_ROIs[iEpoch][iCluster][:,trial_num]= roi_whole_trace[:trial_len]
+                        respTraces_allTrials_ROIs_raw[iEpoch][iCluster][:,trial_num]= roi_whole_trace_raw[:trial_len]
+                    except ValueError:
+                        new_trace = np.full((trial_len,),np.nan)
+                        new_trace[:len(roi_whole_trace)] = roi_whole_trace.copy()
+                        new_trace_raw = np.full((trial_len,),np.nan)
+                        new_trace_raw[:len(roi_whole_trace_raw)] = roi_whole_trace_raw.copy()
+                        wholeTraces_allTrials_ROIs[iEpoch][iCluster][:,trial_num]= new_trace
+                        respTraces_allTrials_ROIs[iEpoch][iCluster][:,trial_num]= new_trace
+                        respTraces_allTrials_ROIs_raw[iEpoch][iCluster][:,trial_num]= new_trace_raw
+                    
+    for iEpoch in trialCoor:
+        for iCluster, roi in enumerate(rois):
+            
+            # Appending trial averaged responses to roi instances only if 
+            # df is used
+            rt = np.nanmean(respTraces_allTrials_ROIs[iEpoch][iCluster],axis=1)
+
+            if stimulus_information['random'] == 0:
+                if iEpoch > 0 and iEpoch < len(trialCoor)-1:
+                        
+                    wt = np.concatenate((np.nanmean(wholeTraces_allTrials_ROIs[iEpoch-1][iCluster],axis=1),
+                                            np.nanmean(wholeTraces_allTrials_ROIs[iEpoch][iCluster],axis=1),
+                                            np.nanmean(wholeTraces_allTrials_ROIs[iEpoch+1][iCluster],axis=1)),
+                                            axis =0) # Trial averaging
+                    roi.base_dur.append(len(np.nanmean(wholeTraces_allTrials_ROIs[iEpoch-1][iCluster],axis=1)))
+                else:
+                    wt = np.nanmean(wholeTraces_allTrials_ROIs[iEpoch][iCluster],axis=1) # Trial averaging
+                    roi.base_dur.append(0) 
+            elif stimulus_information['random'] == 1:
+                wt = np.nanmean(wholeTraces_allTrials_ROIs[iEpoch][iCluster],axis=1) # Trial averaging
+                base_dur = frameRate * stimulus_information['baseline_duration']
+                roi.base_dur.append(int(round(base_dur)))
+            else:
+                wt = np.nanmean(wholeTraces_allTrials_ROIs[iEpoch][iCluster],axis=1) # Trial averaging
+
+            if not df_first: # Do df/f now, after trial averaging
+                if df_method=='mean':
+                    wt = wt/np.mean(wt)
+                    rt = rt/np.mean(rt)
+                    roi.baseline_method = df_method
+        
+                if moving_avg:
+                    wt = movingaverage(wt, bins)
+                    rt = movingaverage(rt, bins)
+                    
+            roi.appendTrace(wt,iEpoch, trace_type = 'whole')
+            roi.appendTrace(rt,iEpoch, trace_type = 'response' )
+                    
+    if df_first:
+        print('df/f done BEFORE trial averaged')
+    else:
+        print('df/f done AFTER trial averaged.')
+    return (wholeTraces_allTrials_ROIs, respTraces_allTrials_ROIs,respTraces_allTrials_ROIs_raw, 
+            baselineTraces_allTrials_ROIs) 
+
+def get_masks_image(rois):
+    """ Generates an image of masks.
+
+    Parameters
+    ==========
+    rois : list
+        A list of ROI_bg instances.
+        
+    
+    Returns
+    =======
+    
+    roi_data_dict : np array
+        A numpy array with masks depicted in different integers
+    """   
+    roi_masks_image = np.array(list(map(lambda idx_roi_pair : \
+                             idx_roi_pair[1].mask.astype(float) * (idx_roi_pair[0]+1), 
+                             list(enumerate(rois))))).sum(axis=0)
+    
+    roi_masks_image[roi_masks_image==0] = np.nan
+    
+    
+    return roi_masks_image

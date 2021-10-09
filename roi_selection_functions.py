@@ -58,7 +58,7 @@ def select_regions(image_to_select_from, image_cmap ="gray",pause_t=7,
         # plt.waitforbuttonpress()
         # plt.pause(pause_t)
         if ask_name:
-            mask_name = input("\nEnter the ROI name:\n>> ") # Python 3.X
+            mask_name = input("\nEnter the ROI name (bg for background):\n>> ") # Python 3.X
             
         else:
             mask_name = iROI
@@ -200,6 +200,25 @@ def run_ROI_selection(extraction_params, stack,stimulus_information, imaging_inf
         ROI_selection_dict['roi_masks'] = roi_masks
         ROI_selection_dict['roi_names'] = roi_names
         ROI_selection_dict['all_rois_image'] = all_rois_image
+
+        cat_bool = np.zeros(shape=np.shape(image_to_select))
+        for idx, cat_name in enumerate(cat_names):
+            if cat_name.lower() == 'bg\r': # Seb: added '\r' for debugging mode
+                bg_mask = cat_masks[idx]
+                continue
+            elif cat_name.lower() == 'bg': 
+                bg_mask = cat_masks[idx]
+                continue
+            elif cat_name.lower() =='otsu\r': # Seb: added '\r' for debugging mode
+                otsu_mask = cat_masks[idx]
+                continue
+            elif cat_name.lower() =='otsu': 
+                otsu_mask = cat_masks[idx]
+                continue
+            cat_bool[cat_masks[cat_names.index(cat_name)]] = 1
+
+        ROI_selection_dict['bg_mask'] = bg_mask
+        ROI_selection_dict['cat_bool'] = cat_bool
         
         return ROI_selection_dict
         #return cat_masks, cat_names, roi_masks, all_rois_image, None, None

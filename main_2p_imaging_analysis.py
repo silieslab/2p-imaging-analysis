@@ -13,9 +13,11 @@ two functions in "stim_functions" still need to be implemented: readStimInformat
 
 import os
 import matplotlib.pyplot as plt
-from core_functions_2p_imaging_analysis import load_movie, get_stim_xml_params,organize_extraction_params,get_epochs_identity
+import numpy as np
+from core_functions_2p_imaging_analysis import load_movie, get_stim_xml_params,organize_extraction_params,get_epochs_identity, calculate_SNR_Corr,plot_roi_masks,conc_traces,interpolate_signal
 from roi_selection_functions import run_ROI_selection
-from roi_class import generate_ROI_instances
+from roi_class import generate_ROI_instances, separate_trials_ROI, get_masks_image
+from core_functions_general import saveWorkspace
 
 #%% Messages to developer
 
@@ -43,6 +45,11 @@ transfer_data_name = '20201213_seb_fly4-TSeries-fly4-001_manual.pickle'
 use_avg_data_for_roi_extract = False
 use_other_series_roiExtraction = False # ROI selection video
 roiExtraction_tseries = 'TSeries-fly1-001'
+
+
+deltaF_method = 'mean' # 'mean'
+df_first = False # If df_f should be done BEFORE trial averaging
+int_rate = 10
 
 # Saving options
 save_data = False
@@ -88,7 +95,7 @@ extraction_params = organize_extraction_params(roi_extraction_type,current_t_ser
     
 ROI_selection_dict = run_ROI_selection(extraction_params,time_series_stack,stimulus_information, imaging_information,image_to_select=mean_image)
 
-#%%  Creation of ROI class
+#%%  Creation of ROI objects of a class
 if ROI_selection_dict['rois'] == None:
     del ROI_selection_dict['rois']
     rois = generate_ROI_instances(ROI_selection_dict,
@@ -96,21 +103,101 @@ if ROI_selection_dict['rois'] == None:
                                           experiment_info = experiment_conditions, 
                                           imaging_info =imaging_information)
 
-#%% Store inforamtion in each roi
+    
+#%%  Background substraction
+time_series = np.transpose(np.subtract(np.transpose(time_series),
+                                       time_series[:,ROI_selection_dict['bg_mask']].mean(axis=1)))
+#%%  Data sorting (epochs sorting) + Trial averaging (TA) + deltaF/f
+# ROI trial separated responses
+analysis_params = {'deltaF_method': deltaF_method, 'df_first': df_first} 
+
+(wholeTraces_allTrials_ROIs, respTraces_allTrials_ROIs,respTraces_allTrials_ROIs_raw,
+ baselineTraces_allTrials_ROIs) = \
+    separate_trials_ROI(time_series,rois,stimulus_information,
+                               imaging_information['frame_rate'],moving_avg = True, bins = 3,
+                               df_method = analysis_params['deltaF_method'],df_first = df_first)
+#%%  SNR and reliability
+baseTraces_SNR = baselineTraces_allTrials_ROIs
+if stimulus_information['random'] == 2:
+    epoch_to_exclude = None
+    baseTraces_SNR = respTraces_allTrials_ROIs_raw.copy()
+elif stimulus_information['random'] == 0:
+    epoch_to_exclude = stimulus_information['baseline_epoch']
+else:
+    epoch_to_exclude = None
+
+[SNR_rois, corr_rois] = calculate_SNR_Corr(baseTraces_SNR,
+                                               respTraces_allTrials_ROIs_raw,rois,
+                                               epoch_to_exclude=None)
+
+#%% Plotting ROIs and properties
+if save_data:
+    figure_save_dir = os.path.join(dataDir, 'Results')
+else: 
+    figure_save_dir = trash_folder
+
+if not os.path.exists(figure_save_dir):
+    os.mkdir(figure_save_dir)
+
+roi_image = get_masks_image(rois)
+plot_roi_masks(roi_image,mean_image,len(rois),
+                   current_movie_ID,save_fig=True,
+                   save_dir=figure_save_dir,alpha=0.4)
+
+#%% Store relevant information in each roi
 for roi in rois:
     roi.extraction_params = extraction_params
     if roi_extraction_type == 'transfer': # Update transferred ROIs
         roi.experiment_info = experiment_conditions
         roi.imaging_info = imaging_information
-    
-#%%  Background substraction
-#%%  Data sorting (epochs sorting, including subepochs trigger by tau)
-#%%  Trial averaging (TA)
-#%%  deltaF/f
-#%%  SNR and reliability
-#%%  Quality index
+        for param in analysis_params.keys():
+            roi.analysis_params[param] = analysis_params[param]
+    else:
+        roi.analysis_params= analysis_params
+
+list(map(lambda roi: roi.appendStimInfo(stimulus_information), rois))
+list(map(lambda roi: roi.findMaxResponse_all_epochs(), rois))
+list(map(lambda roi: roi.setSourceImage(mean_image), rois))
+
 #%%  Data interpolation (to 10 hz)
-#%%  Basic response calculation per epoch (max, min, integral, time to peak, decay rate, correlation)
+print('Seb, split concatenation from interpolation.It does not make sense for some stimuli to concatenate')
+for roi in rois:
+    roi.int_whole_trace_all_epochs = roi.whole_trace_all_epochs.copy()
+    roi.int_stim_trace = roi.whole_trace_all_epochs.copy()
+
+    for idx, epoch in enumerate(list(range(1,roi.stim_info['EPOCHS']))): #Seb: epochs_number --> EPOCHS
+            roi.int_whole_trace_all_epochs[epoch] = interpolate_signal(roi.int_whole_trace_all_epochs[epoch], 
+                                                   roi.imaging_info['frame_rate'], 
+                                                   int_rate)
+            roi.int_stim_trace[epoch] = interpolate_signal(roi.int_stim_trace[epoch], 
+                                                   roi.imaging_info['frame_rate'], 
+                                                   int_rate)
+            roi.int_rate = int_rate
+
+#%%  ROI concatenation
+rois = conc_traces(rois, interpolation = False, int_rate = int_rate)
 #%%  Raw data plot (whole stimulus and response traces for all ROIs, colormaps of masks with SNR-reliability-reponse quality)
 #%%  Single Fly summary plot (includes TA trace per epoch, basic response calculations)
-#%%  Save data pickle file / summary plots
+#%%  Save data pickle file 
+if save_data:
+    os.chdir(dataFolder) # Seb: data_save_vars.txt file needs to be there    
+    varDict = locals()
+    pckl_save_name = ('%s_%s' % (current_movie_ID, extraction_params['type']))
+    saveOutputDir = os.path.join(saveOutputDir, varDict['varDict']['stimulus_information']['stim_name'][:-4]) #Seb: experiment_folder/analyzed_data/stim_name/genotype_folder
+    if not os.path.exists(saveOutputDir):
+            os.mkdir(saveOutputDir) # Seb: creating stim_folder
+    saveOutputDir = os.path.join(saveOutputDir,save_folder_geno)
+    if not os.path.exists(saveOutputDir):
+            os.mkdir(saveOutputDir) # Seb: creating genotype_folder
+    saveWorkspace(saveOutputDir,pckl_save_name, varDict, 
+               varFile='data_save_vars.txt',extension='.pickle')
+
+    print('\n\n%s saved...\n\n' % pckl_save_name)
+else:
+    print('Pickle data not created')
+
+
+
+#%% Temporary
+final_rois = rois
+final_roi_image = get_masks_image(final_rois)

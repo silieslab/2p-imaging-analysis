@@ -11,6 +11,10 @@ import glob
 from skimage import io
 import matplotlib.pyplot as plt
 import numpy as np
+import seaborn as sns
+from scipy.stats.stats import pearsonr
+from itertools import permutations
+
 from xml_functions import getFramePeriod,getMicRelativeTime,getLayerPosition,getPixelSize
 from stim_functions import readStimOut, readStimInformation
 from epoch_functions import getEpochCount, divideEpochs, divide_all_epochs
@@ -234,3 +238,170 @@ def organize_extraction_params(extraction_type,
 
 
 
+def calculate_SNR_Corr(base_traces_all_roi, resp_traces_all_roi,
+                       rois, epoch_to_exclude = None):
+    """ Calculates the signal-to-noise ratio (SNR). Equation taken from
+    Kouvalainen et al. 1994 (see calculation of SNR true from SNR estimated).
+    Also calculates the correlation between the first and the last trial to 
+    estimate the reliability of responses.
+    
+    
+    Parameters
+    ==========
+    respTraces_allTrials_ROIs : list containing np arrays
+        Epoch list of time traces including all trials in the form of:
+            -stimulus epoch-
+        
+    baselineTraces_allTrials_ROIs : list containing np arrays
+        Epoch list of time traces including all trials in the form of:
+            -baseline epoch-
+            
+    rois : list
+        A list of ROI_bg instances.
+        
+    epoch_to_exclude : int 
+        Default: None
+        Epoch number to exclude when calculating corr and SNR
+        
+        
+    Returns
+    =======
+    
+    SNR_max_matrix : np array
+        SNR values for all ROIs.
+        
+    Corr_matrix : np array
+        SNR values for all ROIs.
+        
+    """
+    total_epoch_numbers = len(base_traces_all_roi)
+    
+    SNR_matrix = np.zeros(shape=(len(rois),total_epoch_numbers))
+    Corr_matrix = np.zeros(shape=(len(rois),total_epoch_numbers))
+    
+    for iROI, roi in enumerate(rois):
+        
+        for iEpoch, iEpoch_index in enumerate(base_traces_all_roi):
+            
+            if iEpoch_index == epoch_to_exclude:
+                SNR_matrix[iROI,iEpoch] = 0
+                Corr_matrix[iROI,iEpoch] = 0
+                continue
+            
+            trial_numbers = np.shape(resp_traces_all_roi[iEpoch_index][iROI])[1]
+            
+            
+            currentBaseTrace = base_traces_all_roi[iEpoch_index][iROI][:,:]
+            currentRespTrace =  resp_traces_all_roi[iEpoch_index][iROI][:,:]
+            
+            # Reliability between all possible combinations of trials
+            perm = permutations(range(trial_numbers), 2) 
+            coeff =[]
+            for iPerm, pair in enumerate(perm):
+                curr_coeff, pval = pearsonr(currentRespTrace[:-2,pair[0]],
+                                            currentRespTrace[:-2,pair[1]])
+                coeff.append(curr_coeff)
+                
+            coeff = np.array(coeff).mean()
+            
+            noise_std = currentBaseTrace.std(axis=0).mean(axis=0)
+            resp_std = currentRespTrace.std(axis=0).mean(axis=0)
+            signal_std = resp_std - noise_std
+            # SNR calculation taken from
+            curr_SNR_true = ((trial_numbers+1)/trial_numbers)*(signal_std/noise_std) - 1/trial_numbers
+        #        curr_SNR = (signal_std/noise_std) 
+            SNR_matrix[iROI,iEpoch] = curr_SNR_true
+            Corr_matrix[iROI,iEpoch] = coeff
+        
+        roi.SNR = np.nanmax(SNR_matrix[iROI,:])
+        roi.reliability = np.nanmax(Corr_matrix[iROI,:])
+    
+     
+    SNR_max_matrix = np.nanmax(SNR_matrix,axis=1) 
+    Corr_matrix = np.nanmax(Corr_matrix,axis=1)
+    
+    return SNR_max_matrix, Corr_matrix
+
+def plot_roi_masks(roi_image, underlying_image,n_roi1,exp_ID,
+                       save_fig = False, save_dir = None,alpha=0.5):
+    """ Plots two different cluster images underlying an another common image.
+    Parameters
+    ==========
+    first_clusters_image : numpy array
+        An image array where clusters (all from segmentation) have different 
+        values.
+    
+    second_cluster_image : numpy array
+        An image array where clusters (the final ones) have different values.
+        
+    underlying_image : numpy array
+        An image which will be underlying the clusters.
+        
+    Returns
+    =======
+
+    """
+
+    plt.close('all')
+    plt.style.use("dark_background")
+    fig1, ax1 = plt.subplots(ncols=1, nrows=1,facecolor='k', edgecolor='w',
+                             figsize=(5, 5))
+    
+    # All clusters
+    sns.heatmap(underlying_image,cmap='gray',ax=ax1,cbar=False)
+    sns.heatmap(roi_image,alpha=alpha,cmap = 'tab20b',ax=ax1,
+                cbar=False)
+    
+    ax1.axis('off')
+    ax1.set_title('ROIs n=%d' % n_roi1)
+    
+    if save_fig:
+        # Saving figure
+        save_name = 'ROIs_%s' % (exp_ID)
+        os.chdir(save_dir)
+        plt.savefig('%s.png'% save_name, bbox_inches='tight')
+        print('ROI images saved')
+
+def interpolate_signal(signal, sampling_rate, int_rate):
+    """
+    """
+     #juan: corrected interpolation
+    period=1/sampling_rate
+    timeV=  np.linspace(period,(len(signal)+1)*period,num=len(signal))
+    # Create an interpolated time vector in the desired interpolation rate
+    timeVI=np.linspace(0.1,10,100) #logic (period already interpolated,duration of trace(S),period*duration(s)) #careful if you change int_rate. Hardcoded line for 10hz interpolation of a 10sec stimulus
+    return np.interp(timeVI, timeV, signal)
+
+def conc_traces(rois, interpolation = True, int_rate = 10):
+    """
+    Concatanates and interpolates traces.
+    
+    """
+    for roi in rois:
+        conc_trace = []
+        stim_trace = []
+        for idx, epoch in enumerate(list(range(1,roi.stim_info['EPOCHS']))): #Seb: epochs_number --> EPOCHS
+            curr_stim = np.zeros((1,len(roi.whole_trace_all_epochs[epoch])))[0]
+            curr_stim = curr_stim + idx
+            stim_trace=np.append(stim_trace,curr_stim,axis=0)
+            conc_trace=np.append(conc_trace,roi.whole_trace_all_epochs[epoch],axis=0)
+        
+        roi.conc_trace = conc_trace
+        roi.stim_trace = stim_trace
+        
+        # Calculating correlation
+        curr_coeff, pval = pearsonr(roi.conc_trace,roi.stim_trace)
+        roi.corr_fff = curr_coeff
+        roi.corr_pval = pval
+        if interpolation:
+            roi.int_con_trace = interpolate_signal(conc_trace, 
+                                                   roi.imaging_info['frame_rate'], 
+                                                   int_rate)
+            roi.int_stim_trace = interpolate_signal(stim_trace, 
+                                                    roi.imaging_info['frame_rate'], 
+                                                   int_rate)
+            roi.int_rate = int_rate
+            
+        
+        
+    return rois
