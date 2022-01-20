@@ -362,14 +362,16 @@ def plot_roi_masks(roi_image, underlying_image,n_roi1,exp_ID,
         plt.savefig('%s.png'% save_name, bbox_inches='tight')
         print('ROI images saved')
 
-def interpolate_signal(signal, sampling_rate, int_rate):
+def interpolate_signal(signal, sampling_rate, int_rate,int_time = None):
     """
     """
-     #juan: corrected interpolation
     period=1/sampling_rate
     timeV=  np.linspace(period,(len(signal)+1)*period,num=len(signal))
-    # Create an interpolated time vector in the desired interpolation rate
-    timeVI=np.linspace(0.1,10,100) #logic (period already interpolated,duration of trace(S),period*duration(s)) #careful if you change int_rate. Hardcoded line for 10hz interpolation of a 10sec stimulus
+    if int_time == None:
+        timeVI = np.linspace(1/float(int_rate), (len(signal)+1)*period, num = int(round((len(signal)*period)*int_rate)))
+    else:
+        timeVI = np.linspace(1/float(int_rate), int_time, num = int(round(int_time*int_rate)))
+                         
     return np.interp(timeVI, timeV, signal)
 
 def conc_traces(rois, interpolation = True, int_rate = 10):

@@ -49,7 +49,7 @@ roiExtraction_tseries = 'TSeries-fly1-001'
 
 deltaF_method = 'mean' # 'mean'
 df_first = False # If df_f should be done BEFORE trial averaging
-int_rate = 10
+int_rate = 10 #10 hz extrapolation
 
 # Saving options
 save_data = False
@@ -160,7 +160,7 @@ list(map(lambda roi: roi.findMaxResponse_all_epochs(), rois))
 list(map(lambda roi: roi.setSourceImage(mean_image), rois))
 
 #%%  Data interpolation (to 10 hz)
-print('Seb, split concatenation from interpolation.It does not make sense for some stimuli to concatenate')
+print('Seb, whole_trace_all_epoch last too long? Expected 10, received 100')
 for roi in rois:
     roi.int_whole_trace_all_epochs = roi.whole_trace_all_epochs.copy()
     roi.int_stim_trace = roi.whole_trace_all_epochs.copy()
@@ -169,9 +169,11 @@ for roi in rois:
             roi.int_whole_trace_all_epochs[epoch] = interpolate_signal(roi.int_whole_trace_all_epochs[epoch], 
                                                    roi.imaging_info['frame_rate'], 
                                                    int_rate)
-            roi.int_stim_trace[epoch] = interpolate_signal(roi.int_stim_trace[epoch], 
+            curr_stim = np.zeros((1,len(roi.whole_trace_all_epochs[epoch])))[0]
+            curr_stim = curr_stim + idx
+            roi.int_stim_trace[epoch] = interpolate_signal(curr_stim, 
                                                    roi.imaging_info['frame_rate'], 
-                                                   int_rate)
+                                                   int_rate,int_time = None)
             roi.int_rate = int_rate
 
 #%%  ROI concatenation

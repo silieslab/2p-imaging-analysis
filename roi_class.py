@@ -624,12 +624,12 @@ def separate_trials_ROI(time_series,rois,stimulus_information,frameRate,moving_a
 
             if not df_first: # Do df/f now, after trial averaging
                 if df_method=='mean':
-                    wt = wt/np.mean(wt)
-                    rt = rt/np.mean(rt)
+                    wt = (wt-np.mean(wt))/np.mean(wt) #JC caugth error here (-F0 term was missing), fixed
+                    rt = (rt-np.mean(rt))/np.mean(rt)
                     roi.baseline_method = df_method
         
                 if moving_avg:
-                    wt = movingaverage(wt, bins)
+                    wt = movingaverage(wt, bins) 
                     rt = movingaverage(rt, bins)
                     
             roi.appendTrace(wt,iEpoch, trace_type = 'whole')
