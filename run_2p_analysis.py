@@ -7,11 +7,14 @@ Created on Thu July 15 08:29:00 2022
 
 Run script for the main analysis of calcium imaging data
 """
+# Adding code to the path
 import sys
 code_path = r'\\fs02\smolina$\Dokumente\GitHub\2p-imaging-analysis\main_analysis' # It must be change for the path where the code is in each PC
 sys.path.insert(0, code_path) 
 code_path = r'\\fs02\smolina$\Dokumente\GitHub\2p-imaging-analysis\post_analysis' # It must be change for the path where the code is in each PC
 sys.path.insert(0, code_path) 
+
+#Importing analysis function
 from main_2p_imaging_analysis import main_2p_imaging_analysis
 
 #%% Please complete the followin information

@@ -19,17 +19,26 @@ import glob
 import pandas as pd
 import numpy as np
 from scipy.stats import pearsonr
-os.chdir(r'U:\Dokumente\python_github\2p-imaging-analysis-branch_develop_main')
-from roi_class_JC import ROI_bg
+
+# Adding code to the path
+import sys
+code_path = r'\\fs02\smolina$\Dokumente\GitHub\2p-imaging-analysis\main_analysis' # It must be change for the path where the code is in each PC
+sys.path.insert(0, code_path) 
+code_path = r'\\fs02\smolina$\Dokumente\GitHub\2p-imaging-analysis\post_analysis' # It must be change for the path where the code is in each PC
+sys.path.insert(0, code_path) 
+
+# Importing functions
+from roi_class import ROI_bg
 import ROI_mod
-import process_mov_core_JC as pmc
+import process_mov_core as pmc
+
 #plt.close('all')
 #%% Setting directories where the pickle files are stored
 #   and where the results are saved to
 
-experiment = 'Tm9GC6f_Wnt10tdTOM'   #change for another genotype
+experiment = 'Mi1_GluCla_Mi1_suff_exp'   #change for another genotype
 stim_type = 'StimulusData_Discrete_16_16_100000_El_50ms'  #change for another stimulus type
-dataFolder = r'U:\Dokumente\2p_data\Ultima'
+dataFolder = r'Z:\2p data Ultima\2pData Python_data'
 initialDirectory = os.path.join(dataFolder, experiment)
 saveOutputDir = os.path.join(initialDirectory, 'analyzed_data')
 saved_data_dir = os.path.join(saveOutputDir, stim_type, 'ExpLine') #changed ExpLine to test for debugging
@@ -49,7 +58,7 @@ if not os.path.exists(summary_save_dir):
 #pick_list = pickle_list[1]
 for file in pickle_list:
     fly_data = pickle.load(open(file, 'rb'))
-    rois = fly_data['rois']
+    rois = fly_data['rois'] # 
     
     
     #%% Plotting the STAs
