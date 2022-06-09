@@ -102,6 +102,8 @@ class ROI_bg:
     
         
     def appendTrace(self, trace, epoch_num, trace_type = 'whole'):
+        #JC: trace_type: whole means taking the whole trace with baseline
+        #response means trace without baseline
         
         if trace_type == 'whole':
             try:
@@ -153,7 +155,8 @@ class ROI_bg:
         
     def calculate_DSI_PD(self,method='PDND'):
         '''Calcuates DSI and PD of an ROI '''
-        
+        #What is DSI and PD? -JC
+
         try:
             self.max_resp_all_epochs
             self.max_resp_idx
@@ -166,7 +169,7 @@ class ROI_bg:
             required_epoch_array = \
                     (self.stim_info['epoch_dir'] == ((current_dir+180) % 360)) & \
                     (self.stim_info['epoch_frequency'] == current_freq) & \
-                    (self.stim_info['stimtype'] == current_epoch_type)  
+                    (self.stim_info['stimtype'] == current_epoch_type)
             
             return np.where(required_epoch_array)[0]
         
@@ -199,7 +202,7 @@ class ROI_bg:
             self.PD = current_dir
             
         elif method =='vector':
-            dirs = self.stim_info['epoch_dir'][self.stim_info['baseline_epoch']+1:]
+            dirs = self.stim_info['epoch_dir'][self.stim_info['baseline_epoch']+1:] #start to count w/ 1 -JC
             resps = self.max_resp_all_epochs[self.stim_info['baseline_epoch']+1:]
             
             # Functions work with radians so convert
@@ -259,10 +262,10 @@ class ROI_bg:
         half_dur_frames = int((round(self.imaging_info['frame_rate'] * epochDur[max_edge_epoch]))/2)
         OFF_resp = np.nanmax(trace[:half_dur_frames])
         ON_resp = np.nanmax(trace[half_dur_frames:])
-        CSI = (ON_resp-OFF_resp)/(ON_resp+OFF_resp)
+        CSI = (ON_resp-OFF_resp)/(ON_resp+OFF_resp)     #what is CSI? ->Contrast selective index -JC
         
-        self.CSI = np.abs(CSI)
-        if CSI >0:
+        self.CSI = np.abs(CSI)      #set CSI of class -JC
+        if CSI >0:      #local CSI -JC
             self.CS = 'ON'
         else:
             self.CS = 'OFF'
@@ -341,6 +344,8 @@ def generate_ROI_instances(ROI_selection_dict, source_im,
 
 
     """
+    #wrong documentation? -JC
+
     roi_masks = ROI_selection_dict['roi_masks']
     category_masks = ROI_selection_dict['cat_masks']
     category_names = ROI_selection_dict['cat_names']
@@ -351,11 +356,12 @@ def generate_ROI_instances(ROI_selection_dict, source_im,
     # Generate instances of ROI_bg (class) from the masks
     rois = list(map(lambda mask : ROI_bg(mask, experiment_info = experiment_info,
                                     imaging_info=imaging_info), roi_masks))
+                                    #lambda functions (local functions wo/ def) -JC
 
     def assign_region(roi, category_masks, category_names):
         """ Finds which layer the current mask is in"""
         for iLayer, category_mask in enumerate(category_masks):
-            if np.sum(roi.mask*category_mask):
+            if np.sum(roi.mask*category_mask):          #0 == False -JC
                 roi.setCategory(category_names[iLayer])
     
     # Add information            
@@ -421,6 +427,8 @@ def separate_trials_ROI(time_series,rois,stimulus_information,frameRate,moving_a
             -baseline epoch-
             
     """
+    #return dict not list? -JC
+
     wholeTraces_allTrials_ROIs = {}
     respTraces_allTrials_ROIs = {}
     respTraces_allTrials_ROIs_raw = {}
@@ -517,9 +525,9 @@ def separate_trials_ROI(time_series,rois,stimulus_information,frameRate,moving_a
                     respStart = current_trial_coor[1][1]
                     epochEnd = current_trial_coor[0][1]
                     
-                    if df_first:
+                    if df_first:    #choose if df is averaged over all traces or if first averaged over trace and then df -JC
                         roi_whole_trace = roi.df_trace[trialStart:trialEnd]
-                        roi_resp = roi.df_trace[respStart:epochEnd]
+                        roi_resp = roi.df_trace[respStart:epochEnd] #end baseline to end trial -JC
                         roi_resp_raw = roi.raw_trace[respStart:epochEnd]
                     else:
                         roi_whole_trace = roi.raw_trace[trialStart:trialEnd]
@@ -555,7 +563,7 @@ def separate_trials_ROI(time_series,rois,stimulus_information,frameRate,moving_a
                         baselineTraces_allTrials_ROIs[iEpoch][iCluster][:,trial_num]= baseline_trace
                     else:
                         baselineTraces_allTrials_ROIs[iEpoch][iCluster]\
-                            [:,trial_num]= baselineTraces_allTrials_ROIs\
+                            [:,trial_num] = baselineTraces_allTrials_ROIs\
                             [stimulus_information['baseline_epoch']][iCluster]\
                             [:,trial_num]
                     
@@ -615,6 +623,9 @@ def separate_trials_ROI(time_series,rois,stimulus_information,frameRate,moving_a
                 else:
                     wt = np.nanmean(wholeTraces_allTrials_ROIs[iEpoch][iCluster],axis=1) # Trial averaging
                     roi.base_dur.append(0) 
+                    #JC: average triles (e.g 5) for each epoch (e.g 0 and 1) for each
+                    #ROI in each frame
+                    #example: epoch:0, ROI:0, shape(array(55,5)), averaged: shape(array(55,)) -JC
             elif stimulus_information['random'] == 1:
                 wt = np.nanmean(wholeTraces_allTrials_ROIs[iEpoch][iCluster],axis=1) # Trial averaging
                 base_dur = frameRate * stimulus_information['baseline_duration']
@@ -624,12 +635,12 @@ def separate_trials_ROI(time_series,rois,stimulus_information,frameRate,moving_a
 
             if not df_first: # Do df/f now, after trial averaging
                 if df_method=='mean':
-                    wt = (wt-np.mean(wt))/np.mean(wt) #JC caugth error here (-F0 term was missing), fixed
-                    rt = (rt-np.mean(rt))/np.mean(rt)
+                    wt = (wt-np.mean(wt))/np.mean(wt) #JC: why not (wt-np.mean(wt))/np.mean(wt) = wt/np.mean(wt)-1?
+                    rt = (rt-np.mean(rt))/np.mean(rt)   #JC: added -np.mean() to get df/f
                     roi.baseline_method = df_method
         
                 if moving_avg:
-                    wt = movingaverage(wt, bins) 
+                    wt = movingaverage(wt, bins)
                     rt = movingaverage(rt, bins)
                     
             roi.appendTrace(wt,iEpoch, trace_type = 'whole')

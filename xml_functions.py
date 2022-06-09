@@ -17,6 +17,7 @@ import numpy as np
 
 def getMicRelativeTime(xmlFile):
     """ Gets the relative microscope times from the XML output.
+    Relative time for each Frame from the microscope XML file (it starts with 0)-JC 28102021
 
     Parameters
     ==========
@@ -32,16 +33,17 @@ def getMicRelativeTime(xmlFile):
     # get relative time points of the microscope xml file
     tree = ET.parse(xmlFile)
     root = tree.getroot()
-    micRelTimes = np.array([])
+    micRelTimes = np.array([]) 
     for frame in root.iter('Frame'):
         timept = float(frame.attrib['relativeTime'])
-        micRelTimes = np.append(micRelTimes, timept)
+        micRelTimes = np.append(micRelTimes, timept)     #save it in an empty array
 
     return micRelTimes
 
 
 def getFramePeriod(xmlFile):
     """Gets the frame period from the XML file.
+    How long was one frame during recording (frame period). We only get one value -JC 28102021
 
     Parameters
     ==========
@@ -63,7 +65,7 @@ def getFramePeriod(xmlFile):
 
 
 def getPixelSize(xmlFile):
-    """Gets the frame period from the XML file.
+    """Gets the pixel size from the XML file.
 
     Parameters
     ==========
@@ -72,7 +74,7 @@ def getPixelSize(xmlFile):
 
     Returns
     =======
-    framePeriod : float
+    x_size, y_size, pixelArea : float
     """
     tree = ET.parse(xmlFile)
     root = tree.getroot()
@@ -109,13 +111,13 @@ def getLayerPosition(xmlFile):
     root = tree.getroot()
     # positions are [x,y,z], respectively
     layerPosition = [0, 0, 0]
-    for stateVal in root.iter('PVStateValue'):
-        if stateVal.get('key') == 'positionCurrent':
+    for stateVal in root.iter('PVStateValue'):      # names in xml file, go through all PVStateValue to find the ones with 'key'-JC
+        if stateVal.get('key') == 'positionCurrent':    # look only for 'PVStateValue key' -JC
             for idxValues in stateVal:
                 if idxValues.get('index') == "XAxis":
                     for subIdx in idxValues:
                         if subIdx.get('subindex') == '0':
-                            layerPosition[0] = float(subIdx.get('value'))
+                            layerPosition[0] = float(subIdx.get('value'))   # get into the subcategories to get the right Axis positions -JC
                 elif idxValues.get('index') == "YAxis":
                     for subIdx in idxValues:
                         if subIdx.get('subindex') == '0':
@@ -126,3 +128,4 @@ def getLayerPosition(xmlFile):
                             layerPosition[2] = float(subIdx.get('value'))
 
     return layerPosition
+# %%

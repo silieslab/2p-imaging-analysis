@@ -49,9 +49,9 @@ def readStimOut(stimOutFile, skipHeader):
     with open(stimOutFile, 'r') as infile:
         lines_gen = islice(infile, 2) # Seb: the stimType is printed in line'2' of the _stimulus_ouput from 2pstim
         for line in lines_gen:
-            line = re.sub('\n', '', line)
-            line = re.sub('\r', '', line)
-            line = re.sub(' ', '', line)
+            line = re.sub('\n', '', line)   # get rid of 'line feed' (new line) -JC
+            line = re.sub('\r', '', line)   # get rid of 'carriage return' (goes to beginning of new line, similar to \n) -JC
+            line = re.sub(' ', '', line)    # get rid of space -JC
             stimType = line
 
     return stimType, rawStimData
@@ -86,6 +86,16 @@ def getEpochCount(rawStimData, epochColumn=3):
     # BG edit: Changed the previous epoch extraction, which uses the maximum 
     # number + 1 as the epoch number, to a one finding the unique values and 
     # taking the length of it
+
+    #JC: first get the shape (how many (rows, colums)) from the output file
+    # then we specify which column we want the shape from (in the end just
+    # #of rows from one column), here the epoch column.
+    # With np.unique we can count how many differnt values would be in the epoch
+    # column. And the last [0] is to get the first value of the tuple(row count)
+
+    #same function is in epoch_functions -JC
+    #they are not called from this file but only from the epoch_funcions one -JC
+
     epochCount = np.shape(np.unique(rawStimData[:, epochColumn]))[0]
     print("Number of epochs = " + str(epochCount))
 
@@ -120,6 +130,8 @@ def readStimInformation(stimType, stimInputDir):
     """
 
     stimType = stimType.split('/')[-1] # Seb: \\ to / 
+    # only get last part of stimType, which is the name of stimInput file -JC
+
     try:
         stimInputFile = glob.glob(os.path.join(stimInputDir, stimType))[0]
     except IOError:
@@ -133,11 +145,11 @@ def readStimInformation(stimType, stimInputDir):
             if not curr_list:
                  continue
                     
-            key = curr_list.pop(0)
+            key = curr_list.pop(0)  #remove zeros -JC
                 
             if len(curr_list) == 1 and not "Stimulus." in key:
                 try:
-                    stimInputData[key] = int(curr_list[0])
+                    stimInputData[key] = int(curr_list[0])  #what to do if ture? -JC
                 except ValueError:
                     stimInputData[key] = curr_list[0]
                 continue 
@@ -146,7 +158,7 @@ def readStimInformation(stimType, stimInputDir):
                 key = key[9:]
                     
                 if key.startswith("stimtype"):
-                    stimInputData[key] = list(map(str, curr_list))
+                    stimInputData[key] = list(map(str, curr_list)) #only str in file -JC
                 else: 
                     stimInputData[key] = list(map(float, curr_list))
 
@@ -197,6 +209,7 @@ def divide_all_epochs(rawStimData, epochCount, framePeriod, trialDiff=0.20,
 
         The index of imaging frame column in the stimulus output file
         (start counting from 0).
+        
 
     checkLastTrialLen :
 
@@ -214,35 +227,41 @@ def divide_all_epochs(rawStimData, epochCount, framePeriod, trialDiff=0.20,
         discarded, e.g. because it ran for a shorter time period, min will be
         (max-1).
     """
+    #same function is in epoch_functions -JC
+    #they are not called from this file but only from the epoch_funcions one -JC
+
     trialDiff = float(trialDiff)
     trialCoor = {}
     
     for epoch in range(0, epochCount):
         
-        trialCoor[epoch] = []
+        trialCoor[epoch] = []   #key for each epoch -JC
 
     previous_epoch = []
     for line in rawStimData:
         
-        current_epoch = int(line[epochColumn])
+        current_epoch = int(line[epochColumn])      # defining which epoch we are in/ need to define beginning of new epoch -JC
         
         if (not(previous_epoch == current_epoch )): # Beginning of a new epoch trial
             
             
             if (not(previous_epoch==[])): # If this is after stim start (which is normal case)
-                epoch_trial_end_frame = previous_frame
+                epoch_trial_end_frame = previous_frame  #previouse_frame is last frame from epoch, which is definded later -JC
                 trialCoor[previous_epoch].append([[epoch_trial_start_frame, epoch_trial_end_frame], 
                                             [epoch_trial_start_frame, epoch_trial_end_frame]])
-                epoch_trial_start_frame = int(line[imgFrameColumn])
-                previous_epoch = int(line[epochColumn])
+                                            #why do it 2 times the same? maybe to calculate the
+                                            # trialCount (if last epoch was too short) -JC
+                epoch_trial_start_frame = int(line[imgFrameColumn]) #define new start for current epoch -JC
+                previous_epoch = int(line[epochColumn]) #epoch number of the current epoch to compare to next line -JC
                 
-            else:
+            else:   # start of stimulation -JC
                 previous_epoch = int(line[epochColumn])
                 epoch_trial_start_frame = int(line[imgFrameColumn])
                 
-        previous_frame = int(line[imgFrameColumn])
+        previous_frame = int(line[imgFrameColumn])  #for each line define this variable new, untill the epoche changes, than this
+                                                    #would show the last frame of the previouse epoch -JC
         
-    if checkLastTrialLen:
+    if checkLastTrialLen:   #True or False -JC
         for epoch in trialCoor:
             delSwitch = False
             lenFirstTrial = (trialCoor[epoch][0][0][1]
@@ -269,3 +288,5 @@ def divide_all_epochs(rawStimData, epochCount, framePeriod, trialDiff=0.20,
        
 
     return trialCoor, trialCount
+
+# %%
