@@ -38,6 +38,13 @@ def getEpochCount(rawStimData, epochColumn=3):
     # BG edit: Changed the previous epoch extraction, which uses the maximum 
     # number + 1 as the epoch number, to a one finding the unique values and 
     # taking the length of it
+
+    #JC: first get the shape (how many (rows, colums)) from the output file
+    # then we specify which column we want the shape from (in the end just
+    # #of rows from one column), here the epoch column.
+    # With np.unique we can count how many differnt values would be in the epoch
+    # column. And the last [0] is to get the first value of the tuple(row count)
+    # same as in stim_function --> why not taken from there? -JC
     epochCount = np.shape(np.unique(rawStimData[:, epochColumn]))[0]
     print("Number of epochs = " + str(epochCount))
 
@@ -88,6 +95,8 @@ def divide_all_epochs(rawStimData, epochCount, framePeriod, trialDiff=0.20,
         The index of imaging frame column in the stimulus output file
         (start counting from 0).
 
+        fame number from microscope -JC
+
     checkLastTrialLen :
 
     Returns
@@ -98,41 +107,55 @@ def divide_all_epochs(rawStimData, epochCount, framePeriod, trialDiff=0.20,
         structure: [[X, Y], [X, Y]] where X is the trial beginning and Y 
         is the trial end.
 
+        X and Y are imaging frame numbers from the microsocpe -JC
+
     trialCount : list
         Min (first term in the list) and Max (second term in the list) number
         of trials. Ideally, they are equal, but if the last trial is somehow
         discarded, e.g. because it ran for a shorter time period, min will be
         (max-1).
     """
+    #same function as in stim_function, why two times? Don't repeat yourselfe rule
+    #-> could be difficult to remember to change everything later, if something needs
+    #to be changed -JC
     trialDiff = float(trialDiff)
     trialCoor = {}
     
     for epoch in range(0, epochCount):
         
-        trialCoor[epoch] = []
+        trialCoor[epoch] = []       #key for each epoch -JC
 
     previous_epoch = []
     for line in rawStimData:
         
-        current_epoch = int(line[epochColumn])
+        current_epoch = int(line[epochColumn])  # defining which epoch we are in/ need to define beginning of new epoch -JC
         
         if (not(previous_epoch == current_epoch )): # Beginning of a new epoch trial
             
             
             if (not(previous_epoch==[])): # If this is after stim start (which is normal case)
-                epoch_trial_end_frame = previous_frame
+                epoch_trial_end_frame = previous_frame  #previouse_frame is last frame from epoch, which is definded later -JC
                 trialCoor[previous_epoch].append([[epoch_trial_start_frame, epoch_trial_end_frame], 
                                             [epoch_trial_start_frame, epoch_trial_end_frame]])
-                epoch_trial_start_frame = int(line[imgFrameColumn])
-                previous_epoch = int(line[epochColumn])
+                                            #why do it 2 times the same? maybe to calculate the
+                                            # trialCount (if last epoch was too short) -JC
+                epoch_trial_start_frame = int(line[imgFrameColumn]) #define new start for current epoch -JC
+                previous_epoch = int(line[epochColumn]) #epoch number of the current epoch to compare to next line -JC
                 
-            else:
+            else:   # start of stimulation -JC
                 previous_epoch = int(line[epochColumn])
                 epoch_trial_start_frame = int(line[imgFrameColumn])
                 
-        previous_frame = int(line[imgFrameColumn])
+        previous_frame = int(line[imgFrameColumn])  #for each line define this variable new, untill the epoche changes, than this
+                                                    #would show the last frame of the previouse epoch -JC
+    
+    #JC: added this if statement because there was an empty list for epoch 1 for noise stim
+    if (trialCoor[current_epoch] == []):
+        trialCoor[current_epoch].append([[epoch_trial_start_frame, previous_frame-10], 
+                                            [epoch_trial_start_frame, previous_frame-10]])
         
-    if checkLastTrialLen:
+
+    if checkLastTrialLen:       #True or False -JC
         for epoch in trialCoor:
             delSwitch = False
             lenFirstTrial = (trialCoor[epoch][0][0][1]
@@ -253,6 +276,7 @@ def divideEpochs(rawStimData, epochCount, isRandom, framePeriod,
         # it's set to 3 since trials will be sth like: 0, X
         # if incNextEpoch is True, then it will be like : 0,X,0
         fullEpochSeq = list(range(2))
+        #would look like this: [0, 1] -JC
         for epoch in range(1, epochCount):
             # add epoch numbers to the dictionary
             # do not add the first epoch there
@@ -263,6 +287,7 @@ def divideEpochs(rawStimData, epochCount, isRandom, framePeriod,
     if incNextEpoch:
         # add the first epoch
         fullEpochSeq.append(firstEpochIdx)
+        #append 0 to the list range(2): [0, 1, 0] -JC
     elif not incNextEpoch:
         pass
 
@@ -281,9 +306,9 @@ def divideEpochs(rawStimData, epochCount, isRandom, framePeriod,
             # in the very first trial,
             # min frame coordinate cannot be set by nextMin.
             # this condition satisfies this purpose.
-            currentEpochSeq.append(int(line[epochColumn]))
+            currentEpochSeq.append(int(line[epochColumn]))  #add epochnumber in currentEpochSeq -JC
             if frameBaselineCoor[0][0] == 0:
-                frameBaselineCoor[0][0] = int(line[imgFrameColumn])
+                frameBaselineCoor[0][0] = int(line[imgFrameColumn]) #get microscope frame# in first element of both terms -JC
                 frameBaselineCoor[1][0] = int(line[imgFrameColumn])
 
         elif (len(currentEpochSeq) != 0 and
@@ -291,14 +316,18 @@ def divideEpochs(rawStimData, epochCount, isRandom, framePeriod,
             # only update the current epoch list
             # already got the min coordinate of the trial
             if int(line[epochColumn]) != currentEpochSeq[-1]:
-                currentEpochSeq.append(int(line[epochColumn]))
-
+                currentEpochSeq.append(int(line[epochColumn]))  #add another element to currentEpochSeq -JC
+                                                                #how does this work with incNextEpoch?
+                                                                # would fulfill this condition (the first elif)
+                                                                # but not the rest in this statement?  -JC
             elif int(line[epochColumn]) == currentEpochSeq[-1]:
                 if int(line[epochColumn]) == 0 and currentEpochSeq[-1] == 0:
                     # set the maximum endpoint of the baseline
                     # for the very first trial
                     frameBaselineCoor[1][1] = (int(line[imgFrameColumn])
                                                - overlappingFrames)
+                                               #this would do it for each line of baseline, untill
+                                               #the last one -JC
 
         elif len(currentEpochSeq) == len(fullEpochSeq):
             if nextMin == 0:
