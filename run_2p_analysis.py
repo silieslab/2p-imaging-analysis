@@ -14,12 +14,12 @@ from main_2p_imaging_analysis import main_2p_imaging_analysis
 userParams = {}
 # Fly-specific selection parameters
 userParams['experiment'] = 'Mi1_GluCla_Mi1_suff_exp'
-userParams['current_exp_ID'] = '20210617_seb_fly1'
-userParams['current_t_series'] ='TSeries-fly1-002'
+userParams['current_exp_ID'] = '20201213_seb_fly'
+userParams['current_t_series'] ='TSeries-fly1-011'
 userParams['Genotype'] = 'Mi1_GCaMP6f_Mi1_GluCla_ExpLine_GluCla_suff_exp'
 userParams['save_folder_geno'] = 'ExpLine'
-userParams['Age'] = '4'
-userParams['Sex'] = 'm'
+userParams['Age'] = '6'
+userParams['Sex'] = 'f'
 
 # Choose ROI selection/extraction parameters
 userParams['time_series_stack'] = 'Mot_corr_stack.tif' # A tif stack. (E.g. # 'Raw_stack.tif' 'Mot_corr_stack.tif' '{current_t_series}_Ch2_reg.tif')
@@ -38,12 +38,12 @@ userParams['df_first'] = True # If df_f should be done BEFORE trial averaging. F
 userParams['int_rate'] = 10 # Rate to interpolate the data
 
 # Choose which type of stimulus to analyse (JC)
-userParams['stimulus_type'] = '5_sec_FFF'
+userParams['stimulus_type'] = 'White_Noise'
 # '5_sec_FFF'
 # 'White_Noise'
 
 # Saving options
-save_data = True
+save_data = False
 dataFolder = r'Z:\2p data Ultima\2pData Python_data'  # Main folder where the folder for the userParams['experiment'] is located
 
 #%% Calling and running the actual analysis function
