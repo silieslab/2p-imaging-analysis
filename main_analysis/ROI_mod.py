@@ -23,7 +23,7 @@ from scipy.stats.stats import pearsonr
 from scipy import fft
 from scipy.signal import blackman
 import post_analysis_core as pac
-import process_mov_core_JC as pmc
+import process_mov_core as pmc
 class ROI_bg: 
     """A region of interest from an image sequence """
     

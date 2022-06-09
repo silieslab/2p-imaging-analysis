@@ -7,14 +7,18 @@ Created on Thu July 15 08:29:00 2022
 
 Run script for the main analysis of calcium imaging data
 """
-
+import sys
+code_path = r'\\fs02\smolina$\Dokumente\GitHub\2p-imaging-analysis\main_analysis' # It must be change for the path where the code is in each PC
+sys.path.insert(0, code_path) 
+code_path = r'\\fs02\smolina$\Dokumente\GitHub\2p-imaging-analysis\post_analysis' # It must be change for the path where the code is in each PC
+sys.path.insert(0, code_path) 
 from main_2p_imaging_analysis import main_2p_imaging_analysis
 
 #%% Please complete the followin information
 userParams = {}
 # Fly-specific selection parameters
 userParams['experiment'] = 'Mi1_GluCla_Mi1_suff_exp'
-userParams['current_exp_ID'] = '20201213_seb_fly'
+userParams['current_exp_ID'] = '20201213_seb_fly1'
 userParams['current_t_series'] ='TSeries-fly1-011'
 userParams['Genotype'] = 'Mi1_GCaMP6f_Mi1_GluCla_ExpLine_GluCla_suff_exp'
 userParams['save_folder_geno'] = 'ExpLine'
@@ -43,7 +47,7 @@ userParams['stimulus_type'] = 'White_Noise'
 # 'White_Noise'
 
 # Saving options
-save_data = False
+save_data = True
 dataFolder = r'Z:\2p data Ultima\2pData Python_data'  # Main folder where the folder for the userParams['experiment'] is located
 
 #%% Calling and running the actual analysis function

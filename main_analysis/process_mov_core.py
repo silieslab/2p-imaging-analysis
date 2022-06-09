@@ -2850,14 +2850,14 @@ def interpolate_data_dyuzak(stimtimes, stimframes100hz, dsignal, imagetimes, fre
     
     # Interpolation of stimulus frames and responses to freq
 
-    # Creating time vectors of original 100 Hz(x) and freq Hz sampled(xi)
-    # x = vector with 100Hz rate, xi = vector with user input rate (freq)
+    # Creating time vectors of original 100Hz (or 60Hz) (x)  and freq Hz sampled(xi)
+    # x = vector with 100Hz (or 60Hz) rate, xi = vector with user input rate (freq)
     x = np.linspace(0,len(stimtimes),len(stimtimes))
     xi = np.linspace(0,len(stimtimes),
                      np.round(int((np.max(stimtimes)-np.min(stimtimes))*freq)+1))
 
     # Get interpolated stimulus times for 20Hz
-    # stimtimes and x has same rate (100Hz)
+    # stimtimes and x has same rate (100Hz (or 60Hz))
     # and newstimtimes is interpolated output of xi vector
     newstimtimes = np.interp(xi, x, stimtimes)
     newstimtimes =  np.array(newstimtimes,dtype='float32')
@@ -2870,6 +2870,13 @@ def interpolate_data_dyuzak(stimtimes, stimframes100hz, dsignal, imagetimes, fre
     # function to find interpolated stimulus frames (y value)
     stimframes = stimframes(newstimtimes)
     stimframes = stimframes.astype('int')
+
+    #Adjusting the imagetimes (from microscope) length to the total number of frames in stim_output file 
+    # (Microscope starts recording timing before the stimulus is presented)
+    # (Therefore the first times at the beggining need to be removed)
+    remove_times = len(imagetimes) - len(dsignal)
+    imagetimes = imagetimes[remove_times:]                       
+                        
 
     #Get interpolated responses for 20Hz
     dsignal1 = np.empty(shape=(len(dsignal),
