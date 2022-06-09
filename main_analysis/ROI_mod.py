@@ -3054,6 +3054,7 @@ def plot_STRFs(rois, f_w=None,number=None,cmap='coolwarm'):
             ax3[idx].axis('off')
         sns.heatmap(curr_sta, cmap=cmap, ax=ax[idx], cbar=False,vmax=max_n,
                     center=0)
+        ax[idx].set_title(f'[x,y]: {space_dim_2_max+1}, {space_dim_1_max+1}', fontdict = {'fontsize':4})
         ax[idx].axis('off')
         
     for axs in ax:

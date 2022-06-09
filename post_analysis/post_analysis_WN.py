@@ -71,7 +71,7 @@ for file in pickle_list:
         
     # Plotting STRFs
     fig1, fig2, fig3= ROI_mod.plot_STRFs(rois, f_w=None,number=None,cmap='coolwarm')
-    fig1.suptitle(rois[0].experiment_info['Genotype'])
+    fig1.suptitle(rois[0].experiment_info['Genotype'], fontsize = 6, y=0.98)
     
     f1_n = 'STRFs_%s' % (rois[0].experiment_info['FlyID'])
     
