@@ -60,7 +60,6 @@ for file in pickle_list:
     fly_data = pickle.load(open(file, 'rb'))
     rois = fly_data['rois'] # 
     
-    
     #%% Plotting the STAs
     # Plotting ROIs and properties
     #roi_im = ROI_mod.get_masks_image(rois)

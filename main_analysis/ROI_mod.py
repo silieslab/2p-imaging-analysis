@@ -1434,9 +1434,9 @@ def moments(data):
     x = (X*data).sum()/total
     y = (Y*data).sum()/total
     col = data[:, int(y)]
-    width_x = np.sqrt(np.abs((np.arange(col.size)-y)**2*col).sum()/col.sum())
+    width_x = np.sqrt(np.abs((np.arange(col.size)-y)**2*col).sum()/np.abs(col.sum())) # seb: adding np.abs(col.sum)
     row = data[int(x), :]
-    width_y = np.sqrt(np.abs((np.arange(row.size)-x)**2*row).sum()/row.sum())
+    width_y = np.sqrt(np.abs((np.arange(row.size)-x)**2*row).sum()/np.abs(row.sum())) # seb: adding np.abs(col.sum)
     height = data.max()
     return height, x, y, width_x, width_y
 
@@ -3034,8 +3034,12 @@ def plot_STRFs(rois, f_w=None,number=None,cmap='coolwarm'):
         
         if sta_d1 == 1:
             curr_sta = roi.sta[:,0,:].T
+            sns.heatmap(curr_sta, cmap=cmap, ax=ax[idx], cbar=False,vmax=max_n,
+                    center=0)
         elif sta_d2 ==1:
             curr_sta = roi.sta[:,:,0].T
+            sns.heatmap(curr_sta, cmap=cmap, ax=ax[idx], cbar=False,vmax=max_n,
+                    center=0)
         else:
             max_t = np.where(np.abs(roi.sta)==np.abs(roi.sta).max())[0][0] #JC for checker git time of max response
             curr_sta = roi.sta[max_t,:,:]
@@ -3052,11 +3056,28 @@ def plot_STRFs(rois, f_w=None,number=None,cmap='coolwarm'):
             sns.heatmap(time_space2_sta, cmap=cmap, ax=ax3[idx], cbar=False,vmax=max_n,
                         center=0)
             ax3[idx].axis('off')
-        sns.heatmap(curr_sta, cmap=cmap, ax=ax[idx], cbar=False,vmax=max_n,
-                    center=0)
-        ax[idx].set_title(f'[x,y]: {space_dim_2_max+1}, {space_dim_1_max+1}', fontdict = {'fontsize':4})
-        ax[idx].axis('off')
-        
+
+            try:
+                #Obtaining RF center (x,y) and other parameters from a 2D gaussian fit 
+                A, x, y, width_x, width_y = fitTwoDgaussian(curr_sta)
+                #Turning x,y guassian parameter into screen coordinates
+                CF = 80/len(curr_sta) # 80 degrees is a hard coded screen parameter. CF woul be the deg span of an image' pixel
+                x_deg = 40 - (CF * (x+1)) # x location in the screen (in degress). 40 is a hard coded screen parameter
+                y_deg = -40 + (CF * (y+1)) # y location in the screen (in degress). +40 is a hard coded screen parameter
+                _X = round(x_deg,2)
+                _Y = round(y_deg,2)
+
+            except: 
+                print(f'Fitting guassian failed for roi#: {idx}')
+                _X = space_dim_2_max+1
+                _Y = space_dim_1_max+1
+                
+
+            sns.heatmap(curr_sta, cmap=cmap, ax=ax[idx], cbar=False,vmax=max_n,
+                        center=0)    
+            ax[idx].set_title(f'[x_deg,y_deg]: {_X}, {_Y}', fontdict = {'fontsize':4})
+            ax[idx].axis('off')
+            
     for axs in ax:
         axs.axis('off')
     fig1.suptitle(plot_title)
