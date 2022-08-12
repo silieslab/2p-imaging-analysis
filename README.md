@@ -2,4 +2,4 @@
 Basic analysis for calcium imaging in Python
 updated
 
-It is possible to edit it for me, Jacquelien.
+In this branch the updated code for the standing stripe analysis is done.
