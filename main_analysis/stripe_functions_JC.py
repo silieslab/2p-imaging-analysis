@@ -104,8 +104,11 @@ def divide_epochs_stripes(rawStimData, frame_period, trial_diff=0.20,check_last_
                     if len(curr_nans) >1: #ignore single nan lines at the beginning of epoch
                         all_nan_start.append(curr_nans[0])
                         curr_nans = []
+                    else:
+                        curr_nans = []
         end_list.append(previouse_line)
-        all_nan_start.append(curr_nans[0])
+        if len(curr_nans) >1:
+            all_nan_start.append(curr_nans[0])
                                                 
         epoch_dict[epoch] = {'start':start_list, 'end':end_list, 'x_pos':x_pos_list, 'x_nan_pos':all_nan_start}
 
