@@ -583,7 +583,10 @@ def centering_singel_ROI (traces):
     '''
     max_value = np.nanmax(traces)
     max_index = np.nanargmax(traces)
-    trace_index_to_center = int(len(traces)/2)+max_index
+    if max_index < int(len(traces)/2):
+        trace_index_to_center = int(len(traces)/2)+max_index
+    else:
+        trace_index_to_center = np.absolute(int(len(traces)/2)-max_index)
     centered_trace = np.append(traces[trace_index_to_center:],
                                 traces[:trace_index_to_center])
     return centered_trace
