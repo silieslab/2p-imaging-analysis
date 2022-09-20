@@ -11,6 +11,10 @@ GIT
 - Download and install git from: https://git-scm.com/
 
 IMAGEJ (Optional for image alignment)
+- Download and install git from https://imagej.net/software/fiji/
+- Install following plugins: Image_Stabilizer.class and Image_Stabilizer_Log_Applier.class 
+  from here https://www.cs.cmu.edu/~kangli/code/Image_Stabilizer.html 
+
 
 
 ENVIRONMENT REQUISITES:
