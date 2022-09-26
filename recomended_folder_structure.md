@@ -13,7 +13,7 @@ Ennumeration and identations represent folders, subfolders and files inside.
             1.2.1 Stimtype (e.g. "LocalCircle_5secON_5sec_OFF_120deg_10sec", folder created by the code)
                 1.2.1.1 Defined genotype (e.g."ExpLine", folder created by the code)
                     1.2.1.1.1 Pickle files (files generated and saved during the analysis)
-        1.3 "stimulus_type" (fixed folder name)
+        1.3 "stimulus_types" (fixed folder name)
             1.3.1 Different stimulus input files used during the experiment (STIMULUS_NAME.txt files)
     
     2. "data_save_vars.txt" (fixed name, text file that lists the variables that want to save in a pickle file)
