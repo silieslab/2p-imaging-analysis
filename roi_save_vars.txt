@@ -1,6 +1,0 @@
-cat_masks
-cat_names
-roi_masks
-all_rois_image
-rois
-threshold_dict
