@@ -25,16 +25,7 @@ from matplotlib import cm
 import matplotlib as mpl
 import seaborn as sns
 from scipy import stats
-import sys
-
-code_path = r'\\fs02\jcornean$\Dokumente\python_seb_lumgrating_course\msc_course_2p_analysis\for_msc_course'
-#code_path = r'\\fs02\smolina$\Dokumente\msc_course_2p_analysis\for_msc_course'
-sys.path.insert(0, code_path)
-#sys.path.insert(0, code_path2)  
-os.chdir(code_path)
-
-import ROI_mod_reduced_msc_course as ROI_mod
-import post_analysis_core as pac
+import course_functions.ROI_mod_reduced_msc_course as ROI_mod
 
 #%%# %% Load datasets and desired variables
 
@@ -70,8 +61,8 @@ def load_pickle_data (data_dir, noisy_grating_analysis, stimulusFolder):
     for d in _to_load:
         if d.endswith(".pickle"):
             datasets_to_load.append(d)
-            
-                        
+
+
     properties = ['SNR','Reliab','depth','slope']
     combined_df = pd.DataFrame(columns=properties)
     all_rois = []
@@ -93,12 +84,12 @@ def load_pickle_data (data_dir, noisy_grating_analysis, stimulusFolder):
             print('Unable to import skipping: \n{f} '.format(f=load_path))
             continue
         curr_rois = workspace['final_rois']
-        
+
         stimulus = '{}.txt'
         stimulus = stimulus.format(stimulusFolder)
         if(not(stimulus in curr_rois[0].stim_name)):
             continue
-        
+
         # Thresholding
         # Reliability thresholding
         curr_rois = ROI_mod.analyze_gratings_1Hz(curr_rois)
@@ -108,13 +99,13 @@ def load_pickle_data (data_dir, noisy_grating_analysis, stimulusFolder):
         if len(curr_rois) <= 1:
             warnings.warn('{d} contains 1 or no ROIs, skipping'.format(d=dataset))
             continue
-        
+
         # get some parameters
         geno, all_rois, roi_data = get_roi_geno (curr_rois, all_rois)
         tunings, z_tunings, baselines, baseline_power = get_turning_power_and_baseline(curr_rois, tunings, z_tunings, baselines, baseline_power)
         print(curr_rois[0].experiment_info['Genotype'])
         print(curr_rois[0].stim_name)
-        
+
         rois_df = get_roi_df (curr_rois, roi_data, geno)
         combined_df = combined_df.append(rois_df, ignore_index=True, sort=False)
         print('{ds} successfully loaded\n'.format(ds=dataset))
@@ -130,12 +121,12 @@ def get_roi_geno (curr_rois, all_rois):
         geno = geno + '_ExpLine'
     elif 'PosCnt' in curr_rois[0].experiment_info['Genotype']:
         geno = geno + '_PosCnt'
-    
+
     all_rois.append(curr_rois)
     data_to_extract = ['SNR','reliability','slope','category','base_slope']
     roi_data = ROI_mod.data_to_list(curr_rois, data_to_extract)
 
-    return geno, all_rois, roi_data 
+    return geno, all_rois, roi_data
 
 def get_turning_power_and_baseline(curr_rois, tunings, z_tunings, baselines, baseline_power ):
 
@@ -143,7 +134,7 @@ def get_turning_power_and_baseline(curr_rois, tunings, z_tunings, baselines, bas
                    (list(map(lambda roi: roi.power_at_hz,curr_rois)))
     tunings.append(curr_tuning)
     z_tunings.append(stats.zscore(curr_tuning,axis=1))
-    
+
     curr_base = np.squeeze\
                    (list(map(lambda roi: roi.baselines,curr_rois)))
     baselines.append(curr_base)
@@ -159,27 +150,27 @@ def get_roi_df (curr_rois, roi_data, geno):
     depths = list(map(lambda roi : roi.imaging_info['depth'], curr_rois))
     df_c = {}
     df_c['depth'] = depths
-    
+
     if "RF_map_norm" in curr_rois[0].__dict__.keys():
         df_c['RF_map_center'] = list(map(lambda roi : (roi.RF_map_norm>0.95).astype(int)
                                              , curr_rois))
         df_c['RF_map_bool'] = np.tile(True,len(curr_rois))
         screen = np.zeros(np.shape(curr_rois[0].RF_map))
         screen[np.isnan(curr_rois[0].RF_map)] = -0.1
-        
+
         for roi in curr_rois:
             curr_map = (roi.RF_map_norm>0.95).astype(int)
-    
+
             x1,x2 = ndimage.measurements.center_of_mass(curr_map)
             s1,s2 = ndimage.measurements.center_of_mass(np.ones(shape=screen.shape))
             roi.distance_to_center = np.sqrt(np.square(x1-s1) + np.square(x2-s2))
             roi.horizontal_pos_screen = x2
             roi.vertical_pos_screen = x1
-        df_c['RF_distance_to_center'] = list(map(lambda roi : roi.distance_to_center, 
+        df_c['RF_distance_to_center'] = list(map(lambda roi : roi.distance_to_center,
                                              curr_rois))
-        df_c['RF_horizontal_center'] = list(map(lambda roi : roi.horizontal_pos_screen, 
+        df_c['RF_horizontal_center'] = list(map(lambda roi : roi.horizontal_pos_screen,
                                              curr_rois))
-        df_c['RF_vertical_center'] = list(map(lambda roi : roi.vertical_pos_screen, 
+        df_c['RF_vertical_center'] = list(map(lambda roi : roi.vertical_pos_screen,
                                              curr_rois))
         print('RFs found')
     else:
@@ -188,8 +179,8 @@ def get_roi_df (curr_rois, roi_data, geno):
         df_c['RF_distance_to_center'] = np.tile(np.nan,len(curr_rois))
         df_c['RF_horizontal_center'] = np.tile(np.nan,len(curr_rois))
         df_c['RF_vertical_center'] = np.tile(np.nan,len(curr_rois))
-        
-    
+
+
     df_c['SNR'] = roi_data['SNR']
     df_c['slope'] = roi_data['slope']
     df_c['base_slope'] = roi_data['base_slope']
@@ -197,15 +188,15 @@ def get_roi_df (curr_rois, roi_data, geno):
     df_c['reliability'] = roi_data['reliability']
     df_c['flyID'] = np.tile(curr_rois[0].experiment_info['FlyID'],len(curr_rois))
     df_c['Geno'] = np.tile(geno,len(curr_rois))
-    df_c['uniq_id'] = np.array(map(lambda roi : roi.uniq_id, curr_rois)) 
-    df = pd.DataFrame.from_dict(df_c) 
+    df_c['uniq_id'] = np.array(map(lambda roi : roi.uniq_id, curr_rois))
+    df = pd.DataFrame.from_dict(df_c)
     rois_df = pd.DataFrame.from_dict(df)
-    
+
     return rois_df
 
 #%%
-def concatinate_flies (all_rois, combined_df, tunings, z_tunings, baselines, baseline_power):
-    
+def concatenate_flies (all_rois, combined_df, tunings, z_tunings, baselines, baseline_power):
+
     le = preprocessing.LabelEncoder()
     le.fit(combined_df['flyID'])
     combined_df['flyIDNum'] = le.transform(combined_df['flyID'])
@@ -215,7 +206,7 @@ def concatinate_flies (all_rois, combined_df, tunings, z_tunings, baselines, bas
     z_tunings = np.concatenate(z_tunings)
     baselines = np.concatenate(baselines)
     baseline_power = np.concatenate(baseline_power)
-    
+
     return all_rois, combined_df, tunings, z_tunings, baselines, baseline_power
 
 #%%
@@ -232,5 +223,5 @@ def plot_only_cat_params(plot_only_cat, cat_dict, combined_df, geno, polarity_di
     else:
         curr_neuron_mask = ((combined_df['Geno']==geno) &\
                             (combined_df['stim_type']==polarity_dict[geno[0:3]]))
-    
+
     return curr_neuron_mask
