@@ -22,6 +22,7 @@ import operator
 from scipy.stats import pearsonr
 
 os.chdir(r'\\fs02\jcornean$\Dokumente\PhD\python_github\2p-imaging-analysis-branch_develop_main')
+#os.chdir(r'C:\Users\ASUS\Desktop\2p-imaging-analysis-branch_develop_main')
 from roi_class_JC import ROI_bg, movingaverage
 import ROI_mod
 
@@ -88,7 +89,7 @@ def divide_epochs_stripes(rawStimData, frame_period, trial_diff=0.20,check_last_
         for index, line in enumerate(rawStimData):
             if line[2]== epoch: #column with boutInd --> used to idendify epochs
                 curr_line = line[7] #column with microscope frames
-                if curr_line-previouse_line>1:
+                if curr_line-previouse_line>2:
                     start_list.append(curr_line)
                     if not previouse_line == 0:
                         end_list.append(previouse_line)
@@ -416,6 +417,29 @@ def thresholding (rois,threshold=0.7, SNR_threshold=0.8):
         else:
             used_rois.append(roi)
     return used_rois
+
+#%%
+def get_total_fly_number (used_rois):
+    '''
+    Get the number of all flies that contributed with rois.
+    Parameters:
+    =============
+    used_rois: list of all the ROIs that had values over both thresholds.
+
+    Returns:
+    =============
+    total_fly_number: int
+                total fly number of how many flies are included in the results.
+
+    roi_number: int
+                number of rois that where used.
+    '''
+    fly_ids = [used_rois[x].experiment_info['FlyID'] for x in range(len(used_rois))]
+    total_fly_number = len(np.unique(fly_ids))
+    roi_number = len(used_rois)
+
+    return total_fly_number, roi_number
+
 #%% get sorted epochs
 def get_sorted_epochs (roi):
     '''
@@ -538,8 +562,9 @@ def plot_sorted_traces(used_rois, saved_plots_dir, save_option, date):
     generates a plot
 
     '''
+    total_fly_number, roi_number = get_total_fly_number (used_rois)
     plt.rcdefaults()
-    fig, axs = plt.subplots(len(used_rois),1, figsize=(8,5), sharey=True)
+    fig, axs = plt.subplots(len(used_rois),1, figsize=(8,15), sharey=True)
     for index, roi in enumerate(used_rois):        
         sorted_epochs_dict, sorted_epoch_numbers = get_sorted_epochs(roi)
         sorted_traces, sorted_epochs_dict = get_sorted_traces(roi, 
@@ -557,6 +582,7 @@ def plot_sorted_traces(used_rois, saved_plots_dir, save_option, date):
     axs[-1].set_xlabel('frames', fontsize=14)
     axs[-1].set_ylabel('df/f', fontsize=10)
     fig.text(0.04, 0.5, 'ROIs', va='center', ha='center', rotation='vertical', fontsize=14)
+    plt.text(1,165, f'{total_fly_number} flies, {roi_number} ROIs')
     saved_plot_name = os.path.join(saved_plots_dir, f'{date}_sorted_traces')
     if save_option == True:
         fig.savefig(saved_plot_name)
@@ -606,8 +632,9 @@ def centering_traces (used_rois, saved_plots_dir, date, save_option):
     centered_list: list of the centered traces.
     '''
     centered_list = []
+    total_fly_number, roi_number = get_total_fly_number (used_rois)
     plt.rcdefaults()
-    fig, axs = plt.subplots(len(used_rois),1, figsize=(8,5), sharey=True)
+    fig, axs = plt.subplots(len(used_rois),1, figsize=(8,15), sharey=True)
     for index, roi in enumerate(used_rois):
         sorted_traces = roi.sorted_traces
         centered_trace = centering_singel_ROI(sorted_traces)
@@ -624,6 +651,7 @@ def centering_traces (used_rois, saved_plots_dir, date, save_option):
     axs[-1].set_xlabel('frames', fontsize=14)
     axs[-1].set_ylabel('df/f', fontsize=10)
     fig.text(0.04, 0.5, 'ROIs', va='center', ha='center', rotation='vertical', fontsize=14)
+    plt.text(1,165, f'{total_fly_number} flies, {roi_number} ROIs')
     saved_plot_name = os.path.join(saved_plots_dir, f'{date}_centered_traces')
     if save_option == True:
         fig.savefig(saved_plot_name)
@@ -645,10 +673,14 @@ def plot_centered_traces_and_heatmap (used_rois, saved_plots_dir, date, save_opt
     heatmap and plot of traces
     '''
     plt.rcdefaults()
+    total_fly_number, roi_number = get_total_fly_number (used_rois)
     centered_list = centering_traces(used_rois, saved_plots_dir, date, save_option)
+    min_trace_len = len(min(centered_list, key=len))
+    centered_same_len = [centered_list[x][:min_trace_len] for x in range(len(centered_list))]
     colour = sns.diverging_palette(145, 300, s=60, as_cmap=True)
     plt.figure()
-    sns.heatmap(centered_list, vmin = -1.5, vmax = 1.5, xticklabels=False, cmap = colour)
+    sns.heatmap(centered_same_len, vmin = -1.5, vmax = 1.5, xticklabels=False, cmap = colour)
+    plt.text(1,-1, f'{total_fly_number} flies, {roi_number} ROIs')
     saved_plot_name = os.path.join(saved_plots_dir, f'{date}_heatmap_centered_traces')
     if save_option == True:
         plt.savefig(saved_plot_name)
