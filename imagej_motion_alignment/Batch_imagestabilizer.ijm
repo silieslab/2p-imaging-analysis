@@ -18,7 +18,7 @@ function evaluate(subdir) {
 	selectWindow(name);
 	run("Image Stabilizer Log Applier", " ");
 
-	saveAs("TIFF... ", "C:\\Users\\sebas\\SiliesLab\\2p data\\Mi1_GluCla_Mi1_suff_exp\\rawData\\alignedData\\from FIJI\\"+replace(subdir,"/","")+"_Ch2_reg.tif");
+	saveAs("TIFF... ", "D:\\2pData\\Tm9_recordings\\rawData\\alignedData\\FIJI\\"+replace(subdir,"/","")+"_Ch2_reg.tif");
 	//saveAs("TIFF... ", "U:\\Dokumente\\imageJ_macro\\raw_data\\"+replace(subdir,"/","")+"_Ch2_reg.tif");
 	close();
 	selectWindow("Log");

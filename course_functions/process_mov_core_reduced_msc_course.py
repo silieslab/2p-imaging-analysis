@@ -231,7 +231,7 @@ def run_ROI_selection(extraction_params, stack, image_to_select=None):
         all_rois_image = generate_roi_masks_image(roi_masks,
                                                   np.shape(image_to_select))
 
-        return cat_masks, cat_names, roi_masks, all_rois_image, None, None
+        return cat_masks, cat_names, roi_masks, all_rois_image, None
 
     elif extraction_params['type'] == 'transfer':
 
@@ -946,8 +946,8 @@ def plot_df_dataset(df, properties, save_name = 'ROI_plots_%s',
 
     for idx, ax in enumerate(axs):
         try:
-            sns.displot(df[properties[idx]],ax=ax,color=plt.cm.Dark2(3),rug=True,
-                         hist=False)
+            sns.histplot(df[properties[idx]],ax=ax,color=plt.cm.Dark2(3),rug=True,
+                         hist=True)
         except:
             continue
 
