@@ -29,7 +29,7 @@ from roipoly import RoiPoly, MultiRoi
 from skimage import filters
 from scipy.ndimage.interpolation import rotate
 
-import ROI_mod
+import main_analysis.ROI_mod
 #import summary_figures as sf
 #from xmlUtilities import getFramePeriod, getLayerPosition, getPixelSize,getMicRelativeTime
 #from core_functions import readStimOut, readStimInformation, getEpochCount, divide_all_epochs

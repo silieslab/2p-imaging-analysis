@@ -16,9 +16,9 @@ from scipy.stats.stats import pearsonr
 from scipy.interpolate import NearestNDInterpolator
 from itertools import permutations
 
-from xml_functions import getFramePeriod,getMicRelativeTime,getLayerPosition,getPixelSize
-from stim_functions import readStimOut, readStimInformation
-from epoch_functions import getEpochCount, divideEpochs, divide_all_epochs
+from main_analysis.xml_functions import getFramePeriod,getMicRelativeTime,getLayerPosition,getPixelSize
+from main_analysis.stim_functions import readStimOut, readStimInformation
+from main_analysis.epoch_functions import getEpochCount, divideEpochs, divide_all_epochs
 
 
 
@@ -367,6 +367,30 @@ def plot_roi_masks(roi_image, underlying_image,n_roi1,exp_ID,
         os.chdir(save_dir)
         plt.savefig('%s.png'% save_name, bbox_inches='tight')
         print('ROI images saved')
+
+
+def plot_all_trials(respTraces_allTrials_ROIs,Tseries_folder):
+
+    for e, rois in enumerate(respTraces_allTrials_ROIs.items()):
+        #Rois is a tuple containing [epoch, dict_of rois] 
+        num_subplots = len(rois[1])
+        fig,axes = plt.subplots(ncols=num_subplots, nrows=1,facecolor='k', edgecolor='w',
+                            figsize=(25, 5))
+        fig.suptitle(f'Epoch: {e}') # or fig.subtitle(f'Epoch: {rois[0]}')
+            
+        for i,ax in enumerate(axes): 
+            roi = rois[1][i]
+            ax.plot(roi)
+            ax.set_title(f'ROI #{i}')
+        # Saving figure
+        trial_folder = os.path.join(Tseries_folder,'Trials')
+        if not os.path.exists(trial_folder):
+            os.mkdir(trial_folder)
+        save_name = f'\\Epoch_{e}' 
+            
+        plt.savefig(f'{trial_folder+save_name}.png', bbox_inches='tight')
+        plt.close()
+    return print(f'ROI trials saved here: {trial_folder}')
 
 def interpolate_signal(signal, sampling_rate, int_rate, trace_type, stim_duration = 10):
     """

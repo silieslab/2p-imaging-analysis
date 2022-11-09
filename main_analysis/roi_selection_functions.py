@@ -9,7 +9,7 @@ import math
 import numpy as np
 import matplotlib.pyplot as plt
 from roipoly import RoiPoly
-from roi_class import ROI_bg
+from main_analysis.roi_class import ROI_bg
 import copy
 from tkinter import filedialog
 import _pickle as cPickle

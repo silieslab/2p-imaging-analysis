@@ -15,11 +15,12 @@ def main_2p_imaging_analysis(userParams, dataFolder, save_data):
     import os
     import matplotlib.pyplot as plt
     import numpy as np
-    from core_functions_2p_imaging_analysis import load_movie, get_stim_xml_params,organize_extraction_params,get_epochs_identity, calculate_SNR_Corr,plot_roi_masks,conc_traces,interpolate_signal
-    from roi_selection_functions import run_ROI_selection
-    from roi_class import generate_ROI_instances, separate_trials_ROI, get_masks_image
-    from core_functions_general import saveWorkspace
-    from ROI_mod import reverse_correlation_analysis
+    from main_analysis.core_functions_2p_imaging_analysis import load_movie, get_stim_xml_params,organize_extraction_params,get_epochs_identity,conc_traces,interpolate_signal
+    from main_analysis.core_functions_2p_imaging_analysis import calculate_SNR_Corr,plot_roi_masks,plot_all_trials
+    from main_analysis.roi_selection_functions import run_ROI_selection
+    from main_analysis.roi_class import generate_ROI_instances, separate_trials_ROI, get_masks_image, separate_trials_ROI_v4
+    from main_analysis.core_functions_general import saveWorkspace
+    from main_analysis.ROI_mod import reverse_correlation_analysis
 
     #%% Messages to developer
 
@@ -76,6 +77,7 @@ def main_2p_imaging_analysis(userParams, dataFolder, save_data):
                             'FlyID' : current_exp_ID, 'MovieID': current_movie_ID}
 
     #%% Load of aligned data
+    flyDir = os.path.join(alignedDataDir, current_exp_ID)
     dataDir = os.path.join(alignedDataDir, current_exp_ID, current_t_series)
     time_series = load_movie(dataDir,time_series_stack)
     mean_image = time_series.mean(0)
@@ -118,43 +120,81 @@ def main_2p_imaging_analysis(userParams, dataFolder, save_data):
                                             time_series[:,ROI_selection_dict['bg_mask']].mean(axis=1))) #JC: using selected bg
     #use bg_mask to substract values from there from the whole file -JC    
 
-    if stimulus_type == '5_sec_FFF':
+    if stimulus_type == '--':
         # Data sorting (epochs sorting) + Trial averaging (TA) + deltaF/f
         # ROI trial separated responses
         analysis_params = {'deltaF_method': deltaF_method, 'df_first': df_first} 
 
-        (wholeTraces_allTrials_ROIs, respTraces_allTrials_ROIs,respTraces_allTrials_ROIs_raw,
+        
+        #  df/f calculation and trial average 
+        (wholeTraces_allTrials_ROIs, respTraces_allTrials_ROIs,
         baselineTraces_allTrials_ROIs) = \
-            separate_trials_ROI(time_series,rois,stimulus_information,
-                                    imaging_information['frame_rate'],moving_avg = True, bins = 3,
-                                    df_method = analysis_params['deltaF_method'],df_first = df_first)
+            separate_trials_ROI_v4(time_series,rois,stimulus_information,
+                                    imaging_information['frame_rate'],
+                                    df_method = analysis_params['deltaF_method'])
+        #Info inside respTraces_allTrials_ROIs: [epoch][roi][trial]
+
+        # Previous version, check bugs
+        # (wholeTraces_allTrials_ROIs, respTraces_allTrials_ROIs,respTraces_allTrials_ROIs_raw,
+        # baselineTraces_allTrials_ROIs) = \
+        #     separate_trials_ROI(time_series,rois,stimulus_information,
+        #                             imaging_information['frame_rate'],moving_avg = True, bins = 3,
+        #                             df_method = analysis_params['deltaF_method'],df_first = df_first)
         #%%  SNR and reliability
         baseTraces_SNR = baselineTraces_allTrials_ROIs
         if stimulus_information['random'] == 2:
             epoch_to_exclude = None
-            baseTraces_SNR = respTraces_allTrials_ROIs_raw.copy()
+            baseTraces_SNR = respTraces_allTrials_ROIs.copy() # Seb, previous: respTraces_allTrials_ROIs_raw.copy()
         elif stimulus_information['random'] == 0:
             epoch_to_exclude = stimulus_information['baseline_epoch']
         else:
             epoch_to_exclude = None
 
         [SNR_rois, corr_rois] = calculate_SNR_Corr(baseTraces_SNR,
-                                                    respTraces_allTrials_ROIs_raw,rois,
+                                                    respTraces_allTrials_ROIs,rois, #Seb, previous: respTraces_allTrials_ROIs_raw
                                                     epoch_to_exclude=None)
 
         #%% Plotting ROIs and properties
         if save_data:
-            figure_save_dir = os.path.join(dataDir, 'Results')
+            figure_save_dir = os.path.join(flyDir, 'Preanalysis plots')
         else: 
             figure_save_dir = trash_folder
 
         if not os.path.exists(figure_save_dir):
             os.mkdir(figure_save_dir)
+            Tseries_folder = os.path.join(figure_save_dir, current_t_series)
+            if not os.path.exists(Tseries_folder):
+                os.mkdir(Tseries_folder)
 
         roi_image = get_masks_image(rois)
         plot_roi_masks(roi_image,mean_image,len(rois),
                         current_movie_ID,save_fig=True,
                         save_dir=figure_save_dir,alpha=0.4)
+
+        #Plotting all ROI trials
+        plot_all_trials(respTraces_allTrials_ROIs,Tseries_folder)
+        
+        # for e, rois in enumerate(respTraces_allTrials_ROIs.items()):
+        #     #Rois is a tuple containing [epoch, dict_of rois] 
+        #     num_subplots = len(rois[1])
+        #     fig,axes = plt.subplots(ncols=num_subplots, nrows=1,facecolor='k', edgecolor='w',
+        #                      figsize=(25, 5))
+        #     fig.suptitle(f'Epoch: {e}') # or fig.subtitle(f'Epoch: {rois[0]}')
+            
+        #     for i,ax in enumerate(axes): 
+        #         roi = rois[1][i]
+        #         ax.plot(roi)
+        #         ax.set_title(f'ROI #{i}')
+        #     # Saving figure
+        #     trial_folder = os.path.join(Tseries_folder,'Trials')
+        #     if not os.path.exists(trial_folder):
+        #         os.mkdir(trial_folder)
+        #     save_name = f'\\Epoch_{e}' 
+            
+        #     plt.savefig(f'{trial_folder+save_name}.png', bbox_inches='tight')
+        #     plt.close()
+        # print(f'ROI trials saved here: {trial_folder}')
+                
 
         #%% Store relevant information in each roi
         for roi in rois:
