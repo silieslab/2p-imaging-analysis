@@ -18,8 +18,9 @@ function evaluate(subdir) {
 	selectWindow(name);
 	run("Image Stabilizer Log Applier", " ");
 
-	saveAs("TIFF... ", "D:\\2pData\\Tm9_recordings\\rawData\\alignedData\\FIJI\\"+replace(subdir,"/","")+"_Ch2_reg.tif");
-	//saveAs("TIFF... ", "U:\\Dokumente\\imageJ_macro\\raw_data\\"+replace(subdir,"/","")+"_Ch2_reg.tif");
+	savePath = fname;
+	print("Saving here: "+ savePath);
+	saveAs("TIFF... ", savePath+replace(subdir,"/","")+"_Ch2_reg.tif");
 	close();
 	selectWindow("Log");
 	run("Close");
@@ -33,7 +34,8 @@ flist = getFileList(dir);
 for (i=0; i<flist.length; i++) {
 	if (endsWith(flist[i], "/"))
 		flist2 = getFileList(dir+flist[i]);
-		print(flist2.length);
+		print("Number of files in folder: "+ flist2.length);
+		print("Processing: " + flist[i]);
 		evaluate(flist[i]);
 }
 
