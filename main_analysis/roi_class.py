@@ -375,7 +375,7 @@ def separate_trials_ROI_v4(time_series,rois,stimulus_information,frameRate,
                            df_method = None, df_use = True,
                            max_resp_trial_len = 'max'):
     """ Separates trials epoch-wise into big lists of whole traces, response traces
-    and baseline traces. Adds responses and whole traces into the ROI_bg
+    and baseline traces. Adds responses and whole traces averages into the ROI_bg
     instances.
     Parameters
     ==========
@@ -407,7 +407,7 @@ def separate_trials_ROI_v4(time_series,rois,stimulus_information,frameRate,
             baseline epoch - stimulus epoch - baseline epoch
     respTraces_allTrials_ROIs : list containing np arrays
         Epoch list of time traces including all trials in the form of:
-            -stimulus epoch-
+            -stimulus epoch- , with indices [epoch][roi][trial]
     baselineTraces_allTrials_ROIs : list containing np arrays
         Epoch list of time traces including all trials in the form of:
             -baseline epoch-

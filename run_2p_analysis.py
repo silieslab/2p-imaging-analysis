@@ -9,16 +9,19 @@ Run script for the main analysis of calcium imaging data
 """
 #Importing analysis function
 from main_analysis.main_2p_imaging_analysis import main_2p_imaging_analysis
-#%% Please complete the followin information
+#%% Please complete the following information
 userParams = {}
 # Fly-specific selection parameters
-userParams['experiment'] = 'LC11_BL68362_2x_GCaMP6f'
-userParams['current_exp_ID'] = '20221108_fly4_test'
-userParams['current_t_series'] ='TSeries-fly4-010'
-userParams['Genotype'] = 'LC11_splitGal4_2x_GCaMP6f'
+#TODO Add an option to load this information from a metadata file
+
+userParams['experiment'] = 'LC11-BL68362-2x-GCaMP6f'
+userParams['current_exp_ID'] = '20221111-fly2'
+userParams['current_t_series'] ='TSeries-fly2-012'
+userParams['genotype'] = 'LC11-splitGal4-2x-GCaMP6f'
 userParams['save_folder_geno'] = 'ExpLine'
-userParams['Age'] = '4'
-userParams['Sex'] = 'f'
+userParams['stim_name'] = 'DS100-100WB'
+userParams['age'] = '3'
+userParams['sex'] = 'f'
 
 # Choose ROI selection/extraction parameters
 userParams['time_series_stack'] = f"{userParams['current_t_series']}_Ch2_reg.tif" # A tif stack. (E.g. # 'Raw_stack.tif' 'Mot_corr_stack.tif' '{current_t_series}_Ch2_reg.tif')
@@ -37,13 +40,13 @@ userParams['df_first'] = True # If df_f should be done BEFORE trial averaging. F
 userParams['int_rate'] = 10 # Rate to interpolate the data
 
 # Choose which type of stimulus to analyse (JC)
-userParams['stimulus_type'] = '--'
-# '--' # For general pre analysis of any stimulus. Seb, previsouly was '5secFFF'
+userParams['stimulus_type'] = 'general'
+# 'general' # For general pre analysis of any stimulus. Seb, previsouly was '5secFFF'
 # 'White_Noise' # Specifically for white noise stimulation
 
 # Saving options
-save_data = True
-dataFolder = r'D:\2pData Investigator'  # Main folder where the folder for the userParams['experiment'] is located
+save_data = True #For saving analyzed data in pickle files AND general plots (non stimulus specific plots)
+dataFolder = r'D:\2pData Ultima'  # Main folder where the folder for the userParams['experiment'] is located
 
 #%% Calling and running the actual analysis function
 main_2p_imaging_analysis(userParams, dataFolder, save_data)

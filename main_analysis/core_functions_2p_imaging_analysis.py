@@ -15,10 +15,12 @@ import seaborn as sns
 from scipy.stats.stats import pearsonr
 from scipy.interpolate import NearestNDInterpolator
 from itertools import permutations
+import math
 
 from main_analysis.xml_functions import getFramePeriod,getMicRelativeTime,getLayerPosition,getPixelSize
 from main_analysis.stim_functions import readStimOut, readStimInformation
 from main_analysis.epoch_functions import getEpochCount, divideEpochs, divide_all_epochs
+from post_analysis.post_analysis_core import run_matplotlib_params
 
 
 
@@ -93,7 +95,7 @@ def get_stim_xml_params(t_series_path, stimInputDir):
    #%% Metadata from stimulus computer input and output files
     
     # Stimulus output information
-    stimOutPath = os.path.join(t_series_path, '_stimulus_output_*')
+    stimOutPath = os.path.join(t_series_path, '*_stimulus_output_*')
     stimOutFile = (glob.glob(stimOutPath))[0]   # if there are more stimulus_outputfiles it will take the first one -> [0] -JC
     (stimType, rawStimData) = readStimOut(stimOutFile=stimOutFile, 
                                           skipHeader=3) # Seb: skipHeader = 3 for _stimulus_ouput from 2pstim
@@ -350,8 +352,10 @@ def plot_roi_masks(roi_image, underlying_image,n_roi1,exp_ID,
 
     plt.close('all')
     plt.style.use("dark_background")
+    fig_dim1 = 5
+    fig_dim2 = 5*(roi_image.shape[0]/roi_image.shape[1]) # fig dimention based on original roi_image shape
     fig1, ax1 = plt.subplots(ncols=1, nrows=1,facecolor='k', edgecolor='w',
-                             figsize=(5, 5))
+                             figsize=(fig_dim1,  fig_dim2))
     
     # All clusters
     sns.heatmap(underlying_image,cmap='gray',ax=ax1,cbar=False)
@@ -366,10 +370,15 @@ def plot_roi_masks(roi_image, underlying_image,n_roi1,exp_ID,
         save_name = 'ROIs_%s' % (exp_ID)
         os.chdir(save_dir)
         plt.savefig('%s.png'% save_name, bbox_inches='tight')
+        #plt.savefig('%s.pdf'% save_name, bbox_inches='tight')
         print('ROI images saved')
 
 
-def plot_all_trials(respTraces_allTrials_ROIs,Tseries_folder):
+def plot_all_trials(respTraces_allTrials_ROIs,Tseries_folder,save_fig = False):
+    """
+    
+    Meant for plotting when ROI number > 1
+    """
 
     for e, rois in enumerate(respTraces_allTrials_ROIs.items()):
         #Rois is a tuple containing [epoch, dict_of rois] 
@@ -382,15 +391,98 @@ def plot_all_trials(respTraces_allTrials_ROIs,Tseries_folder):
             roi = rois[1][i]
             ax.plot(roi)
             ax.set_title(f'ROI #{i}')
+            ax.set_ylabel('dF/F')
+            ax.set_xlabel('recording frames')
         # Saving figure
-        trial_folder = os.path.join(Tseries_folder,'Trials')
-        if not os.path.exists(trial_folder):
-            os.mkdir(trial_folder)
-        save_name = f'\\Epoch_{e}' 
-            
-        plt.savefig(f'{trial_folder+save_name}.png', bbox_inches='tight')
+        if save_fig:
+            trial_folder = os.path.join(Tseries_folder,'Trials')
+            if not os.path.exists(trial_folder):
+                os.mkdir(trial_folder)
+            save_name = f'\\Epoch_{e}' 
+                
+            plt.savefig(f'{trial_folder+save_name}.png', bbox_inches='tight')
+            plt.close()
+            print(f'ROI trials saved here: {trial_folder}')
+
+def plot_conc_trace(rois,exp_ID,Tseries_folder,save_fig = False):
+    """
+    Meant for plotting when ROI number > 1
+    """
+    num_subplots = len(rois)
+    fig,axes = plt.subplots(ncols=num_subplots, nrows=1,facecolor='k', edgecolor='w',
+                        figsize=(50, 7))
+    fig.suptitle(f'Trial average concatenated response') 
+
+    for r, ax in enumerate(axes):
+        roi = rois[r]
+        ax.plot(roi.int_conc_trace,label='response')
+        ax.plot(roi.int_scaled_stim_trace,label='epoch change')
+        ax.set_title(f'ROI #{r}')
+        ax.set_ylabel('dF/F')
+        ax.set_xlabel('seconds')
+        #ax.set_xlabel('Screen locations') #Seb: temp
+        ax.legend()
+        
+    # Saving figure
+    if save_fig:
+        trial_average_folder = Tseries_folder 
+        if not os.path.exists(trial_average_folder):
+            os.mkdir(trial_average_folder)
+        save_name = '\\ROI_trial_average_conc_trace_%s' % (exp_ID)      
+        plt.savefig(f'{trial_average_folder+save_name}.png', bbox_inches='tight')
+        plt.savefig(f'{trial_average_folder+save_name}.pdf', bbox_inches='tight')
         plt.close()
-    return print(f'ROI trials saved here: {trial_folder}')
+        print(f'ROI trial average saved here: {trial_average_folder}')
+
+def select_properties_plot(rois , analysis_type):
+
+    if analysis_type == 'general':
+        properties = ['SNR','reliability']
+        colormaps = ['viridis','viridis']
+        vminmax = [(0, 3),  (0, 1)]
+        data_to_extract = ['SNR', 'reliability']
+
+    return properties, colormaps, vminmax, data_to_extract
+
+def plot_roi_properties(images, properties, colormaps,underlying_image,vminmax,
+                        exp_ID,depth,save_fig = False, save_dir = None,
+                        figsize=(10, 6),alpha=0.5):
+    """
+    Parameters
+    ==========
+    Returns
+    =======
+    """
+    plt.close('all')
+    run_matplotlib_params()
+    plt.style.use('dark_background')
+    total_n_images = len(images)
+    col_row_n = int(math.ceil(math.sqrt(total_n_images))) #Seb: added 'int'
+
+    fig1, ax1 = plt.subplots(ncols=col_row_n, nrows=col_row_n, sharex=True,
+                             sharey=True,figsize=figsize)
+    depthstr = 'Z: %d' % depth
+    figtitle = 'ROIs summary: ' + depthstr
+    fig1.suptitle(figtitle,fontsize=12)
+
+    for idx, ax in enumerate(ax1.reshape(-1)):
+        if idx >= total_n_images:
+            ax.axis('off')
+        else:
+            sns.heatmap(underlying_image,cmap='gray',ax=ax,cbar=False)
+
+            sns.heatmap(images[idx],alpha=alpha,cmap = colormaps[idx],ax=ax,
+                        cbar=True,cbar_kws={'label': properties[idx]},
+                        vmin = vminmax[idx][0], vmax=vminmax[idx][1])
+            ax.axis('off')
+
+    if save_fig:
+        # Saving figure
+        save_name = 'ROI_props_%s' % (exp_ID)
+        os.chdir(save_dir)
+        plt.savefig('%s.png'% save_name, bbox_inches='tight',dpi=300)
+        #plt.savefig('%s.pdf'% save_name, bbox_inches='tight',dpi=300)
+        print(f'ROI properties saved here: {save_dir}')
 
 def interpolate_signal(signal, sampling_rate, int_rate, trace_type, stim_duration = 10):
     """
@@ -402,10 +494,15 @@ def interpolate_signal(signal, sampling_rate, int_rate, trace_type, stim_duratio
     #JC: x-coordinates of data points
     stim_duration = int(stim_duration)
     steps = stim_duration*int_rate #how many steps for the time vector depends on int_rate and stimulus duration/ epoch duration -JC
-    timeVI=np.linspace(1/int_rate,stim_duration, steps) #logic (period already interpolated,duration of trace(S),period*duration(s)) #careful if you change int_rate. Hardcoded line for 10hz interpolation of a 10sec stimulus
     #JC: changed hard coded timeVI
     #Juan suggestion of replacing 0.1 with 1/int_rate
+    timeVI=np.linspace(1/int_rate,stim_duration, steps) # Seb: this was right. 
+    #timeVI=np.linspace(1/int_rate,stim_duration*int_rate, steps)# Seb: this was woring
+
+    #Interpolation
     interp_traces = np.interp(timeVI, timeV, signal)
+
+    #TODO Ask Jacqueline why the if statement below, for now, it is commented out
     if trace_type == 'stim':
         for index, value in enumerate (interp_traces):
             if value > 0 and value < 1: #select the value in between 0 and 1 in the stim traces, which was interpolated and replace it with 0 (no slope!) -JC
@@ -420,40 +517,60 @@ def conc_traces(rois, interpolation = True, int_rate = 10):
         conc_trace = []
         stim_trace = []
         prev_stim_dur = 0 #JC
-        for idx, epoch in enumerate(list(range(0,roi.stim_info['EPOCHS']))): #Seb: epochs_number --> EPOCHS JC: changed start to 0 to include first epoch
-            #if not roi.stim_info['texture.duration'] and (roi.stim_info['duration'][idx]==0):  #JC: for noise stim
-            curr_stim_dur = roi.stim_info['duration'][idx]  #JC
-            #elif roi.stim_info['texture.duration'] and (roi.stim_info['duration'][idx]==0):
-            #    curr_stim_dur = roi.stim_info['texture.duration'][idx] * roi.stim_info['texture.count'][idx] #for noise
+        #TODO Solve the issue of somtime having the epoch starting from 0 ot 1
+        #It should be related to stimulus_information['random']
+        start = roi.stim_info['EPOCHS']-len(roi.whole_trace_all_epochs.keys())
+        try:
+            for idx, epoch in enumerate(list(range(start,roi.stim_info['EPOCHS']))): #Seb: epochs_number --> EPOCHS
+                #if not roi.stim_info['texture.duration'] and (roi.stim_info['duration'][idx]==0):  #JC: for noise stim
+                curr_stim_dur = roi.stim_info['duration'][epoch]  #This is wrong. The interpolated trace is sometimes a combination of epochs
+                curr_stim_dur = round(len(roi.whole_trace_all_epochs[epoch])/roi.imaging_info['frame_rate']) # This is rigth
+                #elif roi.stim_info['texture.duration'] and (roi.stim_info['duration'][idx]==0):
+                #    curr_stim_dur = roi.stim_info['texture.duration'][idx] * roi.stim_info['texture.count'][idx] #for noise
+                    
+                stimulus_dur = curr_stim_dur + prev_stim_dur    #JC update stimulus duration with concatination
+                prev_stim_dur = stimulus_dur                    #JC
+                curr_stim = np.zeros((1,len(roi.whole_trace_all_epochs[epoch])))[0]
+                curr_stim = curr_stim + epoch
+                stim_trace=np.append(stim_trace,curr_stim,axis=0)
+                conc_trace=np.append(conc_trace,roi.whole_trace_all_epochs[epoch],axis=0)
+                #getting epoch 0 and 1 together? but still same size?   changed 1 to 0
+        except:
+            for idx, epoch in enumerate(list(range(0,roi.stim_info['EPOCHS']))): #Seb: epochs_number --> EPOCHS JC: changed start to 0 to include first epoch
+                #if not roi.stim_info['texture.duration'] and (roi.stim_info['duration'][idx]==0):  #JC: for noise stim
+                curr_stim_dur = roi.stim_info['duration'][idx]  #JC
+                #elif roi.stim_info['texture.duration'] and (roi.stim_info['duration'][idx]==0):
+                #    curr_stim_dur = roi.stim_info['texture.duration'][idx] * roi.stim_info['texture.count'][idx] #for noise
+                    
                 
-            
-            stimulus_dur = curr_stim_dur + prev_stim_dur    #JC update stimulus duration with concatination
-            prev_stim_dur = stimulus_dur                    #JC
-            curr_stim = np.zeros((1,len(roi.whole_trace_all_epochs[epoch])))[0]
-            curr_stim = curr_stim + idx
-            stim_trace=np.append(stim_trace,curr_stim,axis=0)
-            conc_trace=np.append(conc_trace,roi.whole_trace_all_epochs[epoch],axis=0)
-            #getting epoch 0 and 1 together? but still same size?   changed 1 to 0
+                stimulus_dur = curr_stim_dur + prev_stim_dur    #JC update stimulus duration with concatenation
+                prev_stim_dur = stimulus_dur                    #JC
+                curr_stim = np.zeros((1,len(roi.whole_trace_all_epochs[epoch])))[0]
+                curr_stim = curr_stim + idx
+                stim_trace=np.append(stim_trace,curr_stim,axis=0)
+                conc_trace=np.append(conc_trace,roi.whole_trace_all_epochs[epoch],axis=0)
+                #getting epoch 0 and 1 together? but still same size?   changed 1 to 0
 
-        
+        scaled_stim_trace = stim_trace/(max(stim_trace)/max(conc_trace))
         roi.conc_trace = conc_trace
         roi.stim_trace = stim_trace
         roi.conc_stim_duration = stimulus_dur
+        roi.scaled_stim_trace =scaled_stim_trace 
         
         # Calculating correlation
         curr_coeff, pval = pearsonr(roi.conc_trace,roi.stim_trace)
         roi.corr_fff = curr_coeff
         roi.corr_pval = pval
         if interpolation:
-            roi.int_con_trace = interpolate_signal(conc_trace, 
+            roi.int_conc_trace = interpolate_signal(conc_trace, 
                                                    roi.imaging_info['frame_rate'], 
                                                    int_rate, 'data', stimulus_dur)
             roi.int_stim_trace = interpolate_signal(stim_trace, 
                                                     roi.imaging_info['frame_rate'], 
                                                    int_rate, 'stim', stimulus_dur)
             roi.int_rate = int_rate
+
+            roi.int_scaled_stim_trace = roi.int_stim_trace/(max(roi.int_stim_trace)/max(roi.int_conc_trace))
             
-        
-        
     return rois
 # %%

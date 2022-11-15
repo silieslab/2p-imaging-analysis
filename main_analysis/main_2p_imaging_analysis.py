@@ -12,31 +12,27 @@ two functions in "stim_functions" still need to be implemented: readStimInformat
 """
 def main_2p_imaging_analysis(userParams, dataFolder, save_data):
 
+    #%% Package imports
     import os
     import matplotlib.pyplot as plt
     import numpy as np
     from main_analysis.core_functions_2p_imaging_analysis import load_movie, get_stim_xml_params,organize_extraction_params,get_epochs_identity,conc_traces,interpolate_signal
-    from main_analysis.core_functions_2p_imaging_analysis import calculate_SNR_Corr,plot_roi_masks,plot_all_trials
+    from main_analysis.core_functions_2p_imaging_analysis import calculate_SNR_Corr,plot_roi_masks,plot_all_trials,plot_conc_trace,select_properties_plot,plot_roi_properties
     from main_analysis.roi_selection_functions import run_ROI_selection
-    from main_analysis.roi_class import generate_ROI_instances, separate_trials_ROI, get_masks_image, separate_trials_ROI_v4
+    from main_analysis.roi_class import generate_ROI_instances, get_masks_image, separate_trials_ROI_v4 # ,separate_trials_ROI
     from main_analysis.core_functions_general import saveWorkspace
-    from main_analysis.ROI_mod import reverse_correlation_analysis
+    from main_analysis.ROI_mod import reverse_correlation_analysis, generate_colorMasks_properties
 
-    #%% Messages to developer
-
-    print('Message to developer: ')
-    print('Plots missing for raw data summary. Check:\n################## Plots missing here ##################')
-
-    #%% From the user-defined dictionary of parameters
-
+    #%% General information from the user-defined dictionary in run_2p_analysis
     # Fly-specific selection parameters
     experiment = userParams['experiment']
     current_exp_ID = userParams['current_exp_ID'] 
     current_t_series = userParams['current_t_series']
-    Genotype = userParams['Genotype']
+    genotype = userParams['genotype']
     save_folder_geno = userParams['save_folder_geno']
-    Age = userParams['Age']
-    Sex = userParams['Sex']
+    stim_name = userParams['stim_name']
+    age = userParams['age']
+    sex = userParams['sex']
 
 
     # ROI selection/extraction parameters
@@ -64,16 +60,16 @@ def main_2p_imaging_analysis(userParams, dataFolder, save_data):
     dataFolder = dataFolder 
     initialDirectory = os.path.join(dataFolder, experiment)
     alignedDataDir = os.path.join(initialDirectory,
-                                'rawData\\alignedData')
-    stimInputDir = os.path.join(initialDirectory, 'stimulus_types')
-    saveOutputDir = os.path.join(initialDirectory, 'analyzed_data')
+                                'raw-data\\aligned-data')
+    stimInputDir = os.path.join(initialDirectory, 'stimulus-types')
+    saveOutputDir = os.path.join(initialDirectory, 'analyzed-data')
     summary_save_dir = os.path.join(alignedDataDir,
-                                    '_summaries')
+                                    '-summaries')
     trash_folder = os.path.join(dataFolder, 'Trash')
 
     #%% Auto-setting of some variables
     current_movie_ID = current_exp_ID + '-' + current_t_series
-    experiment_conditions = {'Genotype' : Genotype, 'Age': Age, 'Sex' : Sex,
+    experiment_conditions = {'Genotype' : genotype, 'Age': age, 'Sex' : sex,
                             'FlyID' : current_exp_ID, 'MovieID': current_movie_ID}
 
     #%% Load of aligned data
@@ -81,8 +77,8 @@ def main_2p_imaging_analysis(userParams, dataFolder, save_data):
     dataDir = os.path.join(alignedDataDir, current_exp_ID, current_t_series)
     time_series = load_movie(dataDir,time_series_stack)
     mean_image = time_series.mean(0)
-                                                                                    #imgplot = plt.imshow(mean_image)
-                                                                                    #imgplot = plt.imshow(mean_image,cmap="hot")
+    #imgplot = plt.imshow(mean_image)
+    #imgplot = plt.imshow(mean_image,cmap="hot")
 
     #%% Metadata extraction (from xml, stimulus input and stimulus output file) 
     imaging_information,stimulus_information, stimType, rawStimData,stimInputFile = get_stim_xml_params(dataDir, stimInputDir)
@@ -112,29 +108,30 @@ def main_2p_imaging_analysis(userParams, dataFolder, save_data):
 
     #%%  Background substraction
 
+    #TODO Add options to select type of backround substraction. Currently one option uncommented
+    #Using darkest pixels
     #foreground, background = extract_im_background(time_series, time_series) #JC: changed background substraction method to darkest pixels -2022_02_01
     #background_bool = background.astype(np.bool)    #JC: convert the 1,0 array to Bool (should have worked before but didn't for me, so I changed it)
     # 'time_series = np.transpose(np.subtract(np.transpose(time_series),
-    #                                        time_series[:,background_bool].mean(axis=1))) #JC: useing darkest pixel
-    time_series = np.transpose(np.subtract(np.transpose(time_series),
-                                            time_series[:,ROI_selection_dict['bg_mask']].mean(axis=1))) #JC: using selected bg
-    #use bg_mask to substract values from there from the whole file -JC    
+    #                                        time_series[:,background_bool].mean(axis=1))) 
 
-    if stimulus_type == '--':
+    #Using ROI selected "bg" mask to substract values from there from the whole file
+    time_series = np.transpose(np.subtract(np.transpose(time_series),
+                                            time_series[:,ROI_selection_dict['bg_mask']].mean(axis=1)))    
+
+    if stimulus_type == 'general':
         # Data sorting (epochs sorting) + Trial averaging (TA) + deltaF/f
         # ROI trial separated responses
-        analysis_params = {'deltaF_method': deltaF_method, 'df_first': df_first} 
+        analysis_params = {'deltaF_method': deltaF_method, 'df_first': df_first, 'analysis_type': stimulus_type} 
 
-        
         #  df/f calculation and trial average 
         (wholeTraces_allTrials_ROIs, respTraces_allTrials_ROIs,
         baselineTraces_allTrials_ROIs) = \
             separate_trials_ROI_v4(time_series,rois,stimulus_information,
                                     imaging_information['frame_rate'],
                                     df_method = analysis_params['deltaF_method'])
-        #Info inside respTraces_allTrials_ROIs: [epoch][roi][trial]
 
-        # Previous version, check bugs
+        # TODO commented out previous version, check bugs
         # (wholeTraces_allTrials_ROIs, respTraces_allTrials_ROIs,respTraces_allTrials_ROIs_raw,
         # baselineTraces_allTrials_ROIs) = \
         #     separate_trials_ROI(time_series,rois,stimulus_information,
@@ -153,47 +150,6 @@ def main_2p_imaging_analysis(userParams, dataFolder, save_data):
         [SNR_rois, corr_rois] = calculate_SNR_Corr(baseTraces_SNR,
                                                     respTraces_allTrials_ROIs,rois, #Seb, previous: respTraces_allTrials_ROIs_raw
                                                     epoch_to_exclude=None)
-
-        #%% Plotting ROIs and properties
-        if save_data:
-            figure_save_dir = os.path.join(flyDir, 'Preanalysis plots')
-        else: 
-            figure_save_dir = trash_folder
-
-        if not os.path.exists(figure_save_dir):
-            os.mkdir(figure_save_dir)
-            Tseries_folder = os.path.join(figure_save_dir, current_t_series)
-            if not os.path.exists(Tseries_folder):
-                os.mkdir(Tseries_folder)
-
-        roi_image = get_masks_image(rois)
-        plot_roi_masks(roi_image,mean_image,len(rois),
-                        current_movie_ID,save_fig=True,
-                        save_dir=figure_save_dir,alpha=0.4)
-
-        #Plotting all ROI trials
-        plot_all_trials(respTraces_allTrials_ROIs,Tseries_folder)
-        
-        # for e, rois in enumerate(respTraces_allTrials_ROIs.items()):
-        #     #Rois is a tuple containing [epoch, dict_of rois] 
-        #     num_subplots = len(rois[1])
-        #     fig,axes = plt.subplots(ncols=num_subplots, nrows=1,facecolor='k', edgecolor='w',
-        #                      figsize=(25, 5))
-        #     fig.suptitle(f'Epoch: {e}') # or fig.subtitle(f'Epoch: {rois[0]}')
-            
-        #     for i,ax in enumerate(axes): 
-        #         roi = rois[1][i]
-        #         ax.plot(roi)
-        #         ax.set_title(f'ROI #{i}')
-        #     # Saving figure
-        #     trial_folder = os.path.join(Tseries_folder,'Trials')
-        #     if not os.path.exists(trial_folder):
-        #         os.mkdir(trial_folder)
-        #     save_name = f'\\Epoch_{e}' 
-            
-        #     plt.savefig(f'{trial_folder+save_name}.png', bbox_inches='tight')
-        #     plt.close()
-        # print(f'ROI trials saved here: {trial_folder}')
                 
 
         #%% Store relevant information in each roi
@@ -212,22 +168,31 @@ def main_2p_imaging_analysis(userParams, dataFolder, save_data):
         list(map(lambda roi: roi.setSourceImage(mean_image), rois))
 
         #Data interpolation (to 10 hz)
-        print('Seb, split concatenation from interpolation.It does not make sense for some stimuli to concatenate')
+        #So far for "whole_trace_all_epochs", any other trace to add?
         for roi in rois:
             roi.int_whole_trace_all_epochs = roi.whole_trace_all_epochs.copy()
-            roi.int_stim_trace = roi.whole_trace_all_epochs.copy()  #difference? -JC
             #JC: whole_trace_all_epochs has mean of trials (df/f) for each frame
             #    for the respective ROI for each epoch stored.
             #    If movingaverage = True, traces were convolved with a certain bin size
 
-            for idx, epoch in enumerate(list(range(0,roi.stim_info['EPOCHS']))): #Seb: epochs_number --> EPOCHS, JC: changed beginning to 0 so first eppch is included
-                    stimulus_dur = roi.stim_info['duration'][idx]   #JC: needed for not had coded interpolation
+            #TODO Solve the issue of somtime having the epoch starting from 0 ot 1
+            #It should be related to stimulus_information['random']? By now, it it solved by adding a "start" variable
+            start = roi.stim_info['EPOCHS']-len(roi.whole_trace_all_epochs.keys())
+            try:
+                for idx, epoch in enumerate(list(range(start,roi.stim_info['EPOCHS']))): #Seb: epochs_number --> EPOCHS
+                        #TODO Show to Jacqueline why the following line is wrong
+                        stimulus_dur = roi.stim_info['duration'][epoch] # This is wrong. The interpolated trace is sometimes a combination of epochs
+                        stimulus_dur = round(len(roi.int_whole_trace_all_epochs[epoch])/roi.imaging_info['frame_rate']) # This is rigth
+                        roi.int_whole_trace_all_epochs[epoch] = interpolate_signal(roi.int_whole_trace_all_epochs[epoch], 
+                                                            roi.imaging_info['frame_rate'], 
+                                                            int_rate, 'data', stimulus_dur)
+                        roi.int_rate = int_rate
+            except:
+                for idx, epoch in enumerate(list(range(0,roi.stim_info['EPOCHS']))): #Seb: epochs_number --> EPOCHS, JC: changed beginning to 0 so first eppch is included
+                    stimulus_dur = roi.stim_info['duration'][idx] # check if [idx] or [epoch] here
                     roi.int_whole_trace_all_epochs[epoch] = interpolate_signal(roi.int_whole_trace_all_epochs[epoch], 
                                                         roi.imaging_info['frame_rate'], 
                                                         int_rate, 'data', stimulus_dur)
-                    roi.int_stim_trace[epoch] = interpolate_signal(roi.int_stim_trace[epoch], 
-                                                        roi.imaging_info['frame_rate'], 
-                                                        int_rate, 'stim', stimulus_dur)
                     roi.int_rate = int_rate
 
     #%%  ROI concatenation
@@ -253,19 +218,52 @@ def main_2p_imaging_analysis(userParams, dataFolder, save_data):
 
 
         #%% White noise analysis
-
         rois = reverse_correlation_analysis(rois, noise_type='grit') #JC: added grit option
         #final_rois = rois
 
     
-
     #%%  Raw data plot (whole stimulus and response traces for all ROIs, colormaps of masks with SNR-reliability-reponse quality)
 
-    ################## Plots missing here ##################
+    # Creating the folder where to save preanalysis plots
+    if save_data:
+        plots_save_dir = os.path.join(saveOutputDir, 'General plots')
+    else: 
+        plots_save_dir = trash_folder
 
-    #%%  Single Fly summary plot (includes TA trace per epoch, basic response calculations)
+    current_movie_save_folder = os.path.join(plots_save_dir, current_movie_ID)
+    if not os.path.exists(plots_save_dir):
+        os.mkdir(plots_save_dir)
+        if not os.path.exists(current_movie_save_folder):
+            os.mkdir(current_movie_save_folder)
 
-    ################## Plots missing here ##################
+
+    #Plotting all ROI trials
+    plot_all_trials(respTraces_allTrials_ROIs,current_movie_save_folder,save_fig = True)
+
+    #Plotting average response to all epochs, concatenated
+    plot_conc_trace(rois,current_movie_ID,current_movie_save_folder,save_fig = True)
+
+    #Plotting ROIs masks
+    roi_image = get_masks_image(rois)
+    plot_roi_masks(roi_image,mean_image,len(rois),
+                        current_movie_ID,save_fig=True,
+                        save_dir=current_movie_save_folder,alpha=0.4)
+
+    #Plotting Reliability and SNR
+    images = []
+    (properties, colormaps, vminmax, data_to_extract) = \
+        select_properties_plot(rois , analysis_params['analysis_type'])
+    for prop in properties:
+        images.append(generate_colorMasks_properties(rois, prop))
+
+    plot_roi_properties(images, properties, colormaps, mean_image,
+                        vminmax,current_movie_ID, imaging_information['depth'],
+                        save_fig=True, save_dir=current_movie_save_folder,figsize=(12, 6),
+                        alpha=0.5)
+
+    #Single Fly summary plot (include TA trace per epoch, basic response calculations)
+
+    #TODO create some nice plots as functions called from main_analysis.core_functions_2p_imaging_analysis 
 
 
     #%%  Save data pickle file 
@@ -273,22 +271,18 @@ def main_2p_imaging_analysis(userParams, dataFolder, save_data):
         os.chdir(dataFolder) # Seb: data_save_vars.txt file needs to be there    
         varDict = locals()
         pckl_save_name = ('%s_%s' % (current_movie_ID, extraction_params['type']))
-        saveOutputDir = os.path.join(saveOutputDir, varDict['varDict']['stimulus_information']['stim_name'][:-4]) #Seb: experiment_folder/analyzed_data/stim_name/genotype_folder
+        saveOutputDir = os.path.join(saveOutputDir,stim_name)
         if not os.path.exists(saveOutputDir):
                 os.mkdir(saveOutputDir) # Seb: creating stim_folder
         saveOutputDir = os.path.join(saveOutputDir,save_folder_geno)
         if not os.path.exists(saveOutputDir):
                 os.mkdir(saveOutputDir) # Seb: creating genotype_folder
         saveWorkspace(saveOutputDir,pckl_save_name, varDict, 
-                varFile='data_save_vars.txt',extension='.pickle')
+                varFile='data-save-vars.txt',extension='.pickle')
 
         print('\n\n%s saved...\n\n' % pckl_save_name)
     else:
         print('Pickle data not created')
 
 
-
-    #%% Temporary
-    final_rois = rois
-    final_roi_image = get_masks_image(final_rois)
     return print('2p analysis completed')
