@@ -2,7 +2,7 @@
 """
 Created on Wed Sep 22 11:56:30 2021
 
-@author: smolina and Burak Gur
+@authors: Burak Gur, Sebastian Molina-Obando
 """
 
 import math

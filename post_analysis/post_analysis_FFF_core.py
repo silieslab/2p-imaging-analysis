@@ -4,7 +4,7 @@
 '''
 Created on 22.03.2022
 
-@author: Jacqueline Cornean (JC)
+@author: Jacqueline Cornean
 
 Code for Full Field Flash Analysis data, to plot first responses of the neurons.
 Here are the core functions to plot the graphs

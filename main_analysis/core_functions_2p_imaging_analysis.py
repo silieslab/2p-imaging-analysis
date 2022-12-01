@@ -2,7 +2,7 @@
 """
 Created on Wed Sep 15 15:44:39 2021
 
-@author: smolina and Burak Gur
+@authors: Burak Gur, Juan F. Vargas, Jacqueline Cornean, Sebastian Molina-Obando
 """
 #%% Importing packages
 
@@ -414,14 +414,22 @@ def plot_conc_trace(rois,exp_ID,Tseries_folder,save_fig = False):
     fig.suptitle(f'Trial average concatenated response') 
 
     for r, ax in enumerate(axes):
+        time_trace = np.linspace(0, len(roi.int_conc_trace)/roi.int_rate, num =len(roi.int_conc_trace))
         roi = rois[r]
-        ax.plot(roi.int_conc_trace,label='response')
-        ax.plot(roi.int_scaled_stim_trace,label='epoch change')
+        color = 'tab:blue'
+        ax.plot(time_trace,roi.int_conc_trace,label='response',color=color)
         ax.set_title(f'ROI #{r}')
-        ax.set_ylabel('dF/F')
-        ax.set_xlabel('seconds')
-        #ax.set_xlabel('Screen locations') #Seb: temp
-        ax.legend()
+        ax.set_ylabel('dF/F', color=color)  
+        ax.set_xlabel('time (s)')
+        ax.tick_params(axis='y', labelcolor=color)
+        ax.legend(loc=(0, 0.95))
+
+        ax2 = ax.twinx()  # initiate a second axes that shares the same x-axis
+        color = 'tab:orange'
+        ax2.set_ylabel('epochs', color=color)  
+        ax2.plot(time_trace,roi.int_stim_trace,label='stimulus',color=color)
+        ax2.tick_params(axis='y', labelcolor=color)
+        ax2.legend(loc=(0, 0.9))
         
     # Saving figure
     if save_fig:

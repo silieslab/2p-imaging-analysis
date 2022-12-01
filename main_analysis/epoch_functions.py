@@ -2,7 +2,7 @@
 """
 Created on Wed Sep 15 17:25:19 2021
 
-@author: smolina and Burak Gur
+@authors: Burak Gur, Sebastian Molina-Obando
 """
 #%% Importing packages
 import numpy as np

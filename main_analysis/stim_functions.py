@@ -2,7 +2,7 @@
 """
 Created on Wed Sep 15 16:38:23 2021
 
-@author: smolina and Burak Gur
+@authors: Burak Gur, Sebastian Molina-Obando
 """
 #%% Importing packages
 import re

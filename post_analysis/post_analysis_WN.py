@@ -4,11 +4,11 @@
 '''
 Created on 22.03.2022
 
-@author: Jacqueline Cornean (JC)
+@author: Jacqueline Cornean
 
 Code for White Noise Post Analysis data, to plot RF of single ROIs
 and to get the half width maximum...
-This code leans on and uses part of the code of @burakgur and @smolina.
+This code leans on and uses part of the code of  Burak Gur, Sebastian Molina-Obando
 '''
 #%% Importing packages
 import matplotlib.pyplot as plt

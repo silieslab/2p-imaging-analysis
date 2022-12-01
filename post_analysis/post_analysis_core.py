@@ -3,7 +3,7 @@
 """
 Created on Wed Jan  8 11:20:14 2020
 
-@author: burakgur
+@authors: Burak Gur, Sebastian Molina-Obando
 """
 
 #%% Packages

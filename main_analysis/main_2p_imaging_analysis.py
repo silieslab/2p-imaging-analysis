@@ -2,7 +2,7 @@
 """
 Created on Wed Sep 15 15:27:10 2021
 
-@author: smolina and Burak Gur
+@authors: Burak Gur, Juan F. Vargas, Jacqueline Cornean, Sebastian Molina-Obando
 
 
 GENERAL DISCLAIMER : the code is optimized for "2pstim" stimulation currently running in ULTIMA

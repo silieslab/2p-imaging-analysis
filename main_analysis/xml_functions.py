@@ -2,7 +2,7 @@
 """
 Created on Wed Sep 15 16:12:59 2021
 
-@author: smolina and Burak Gur
+@authors: Burak Gur, Sebastian Molina-Obando
 """
 #%% Importing packages
 from __future__ import division

@@ -3,14 +3,13 @@
 """
 Created on Thu Oct 17 15:09:54 2019
 
-@author: burakgur
+@authors: Burak Gur
 """
 import numpy as np
 from numpy.fft import fft, fftfreq
 import matplotlib.pyplot as plt
 import seaborn as sns
 import pandas as pd
-#import sima # Commented out by seb
 import copy
 import scipy
 from warnings import warn

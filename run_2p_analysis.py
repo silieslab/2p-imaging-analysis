@@ -3,7 +3,7 @@
 """
 Created on Thu July 15 08:29:00 2022
 
-@author: smolina
+@author: Sebastian Molina-Obando
 
 Run script for the main analysis of calcium imaging data
 """
@@ -24,7 +24,7 @@ userParams['age'] = '3'
 userParams['sex'] = 'f'
 
 # Choose ROI selection/extraction parameters
-userParams['time_series_stack'] = f"{userParams['current_t_series']}_Ch2_reg.tif" # A tif stack. (E.g. # 'Raw_stack.tif' 'Mot_corr_stack.tif' '{current_t_series}_Ch2_reg.tif')
+userParams['time_series_stack'] = f"{userParams['current_t_series']}_Ch2_reg.tif" # Name of your motion-aligned tif stack.
 userParams['roi_extraction_type'] = 'manual' #  'transfer' 'manual' 'cluster_analysis'
 userParams['transfer_type'] = 'minimal' # 'minimal' (so far the single option)
 userParams['transfer_TSeries'] = 'TSeries-fly4-001' # Choose the other TSeries you want to tranfer the ROIs from
@@ -41,8 +41,8 @@ userParams['int_rate'] = 10 # Rate to interpolate the data
 
 # Choose which type of stimulus to analyse (JC)
 userParams['stimulus_type'] = 'general'
-# 'general' # For general pre analysis of any stimulus. Seb, previsouly was '5secFFF'
-# 'White_Noise' # Specifically for white noise stimulation
+# 'general' # For general pre analysis of any stimulus. (stimulus agnostic)
+# 'White_Noise' # Specifically for white noise stimulation (this is a temporary option that will be moved to stim-specific postanylsis function)
 
 # Saving options
 save_data = True #For saving analyzed data in pickle files AND general plots (non stimulus specific plots)

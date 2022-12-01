@@ -3,9 +3,7 @@
 """
 Created on Thu Feb 13 13:52:56 2020
 
-@author: burakgur
-modified by sebasto_7
-modified by JacquelineC
+@authors: Burak Gur, Sebastian Molina-Obando, Jacqueline Cornean
 """
 # %% Importing packages
 import os

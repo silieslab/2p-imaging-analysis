@@ -2,7 +2,7 @@
 """
 Created on Mon Sep  6 13:05:20 2021
 
-@author: Admin
+@authors: Burak Gur, Sebastian Molina-Obando
 """
 
 import os

@@ -3,13 +3,12 @@
 """
 Created on Mon Jan  6 11:42:35 2020
 
-@author: burakgur
+@authors: Burak Gur, Deniz Yuzak
 """
 
 
 import copy
 import time
-#import sima
 import os
 import glob
 import numpy as np
