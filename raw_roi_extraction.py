@@ -118,7 +118,7 @@ if save_raw_ROIs:
             os.mkdir(saveOutputDir) # Seb: creating stim_folder 
 
     saveWorkspace(saveOutputDir,pckl_save_name, varDict, 
-               varFile='roi_save_vars.txt',extension='.pickle')
+               varFile='roi-save-vars.txt',extension='.pickle')
 
     print('\n\n%s saved...\n\n' % pckl_save_name)
 else:
