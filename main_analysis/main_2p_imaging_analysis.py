@@ -87,6 +87,7 @@ def main_2p_imaging_analysis(userParams, dataFolder, save_data):
     stimulus_information = get_epochs_identity(imaging_information,stimulus_information,stimType, rawStimData,stimInputFile)
 
 
+
     #%%  ROI selection
 
     extraction_params = organize_extraction_params(roi_extraction_type,current_t_series=current_t_series,current_exp_ID=current_exp_ID,
@@ -195,7 +196,7 @@ def main_2p_imaging_analysis(userParams, dataFolder, save_data):
                                                         int_rate, 'data', stimulus_dur)
                     roi.int_rate = int_rate
 
-    #%%  ROI concatenation
+        # ROI concatenation
         rois = conc_traces(rois, interpolation = True, int_rate = int_rate)
 
     elif stimulus_type == 'White_Noise':
@@ -221,7 +222,12 @@ def main_2p_imaging_analysis(userParams, dataFolder, save_data):
         rois = reverse_correlation_analysis(rois, noise_type='grit') #JC: added grit option
         #final_rois = rois
 
+    #%% Printing basic information about the analysis done so far
+    print('Basic information about the current analysis: \n')
     
+
+
+
     #%%  Raw data plot (whole stimulus and response traces for all ROIs, colormaps of masks with SNR-reliability-reponse quality)
 
     # Creating the folder where to save preanalysis plots
