@@ -127,7 +127,10 @@ def get_epochs_identity(imaging_information,stimulus_information,stimType, rawSt
                                 ...
     """
     
-    isRandom = int(stimulus_information['randomize'][0])    #get first value of 'randomize' -JC
+    try:
+        isRandom = int(stimulus_information['randomize'][0])    #get first value of 'randomize' -JC
+    except:
+        isRandom = int(stimulus_information['RANDOMIZATION_MODE'])
     epochDur = stimulus_information['duration']
     epochDur = [float(sec) for sec in epochDur]     #transform in float (but aren't they already?) -JC
     epochCount = getEpochCount(rawStimData=rawStimData, epochColumn=3)
@@ -395,6 +398,8 @@ def plot_all_trials(respTraces_allTrials_ROIs,Tseries_folder,save_fig = False):
             ax.set_xlabel('recording frames')
         # Saving figure
         if save_fig:
+            if not os.path.exists(Tseries_folder):
+                os.mkdir(Tseries_folder)
             trial_folder = os.path.join(Tseries_folder,'Trials')
             if not os.path.exists(trial_folder):
                 os.mkdir(trial_folder)
@@ -402,7 +407,7 @@ def plot_all_trials(respTraces_allTrials_ROIs,Tseries_folder,save_fig = False):
                 
             plt.savefig(f'{trial_folder+save_name}.png', bbox_inches='tight')
             plt.close()
-            print(f'ROI trials saved here: {trial_folder}')
+    print(f'ROI trials saved here: {trial_folder}')
 
 def plot_conc_trace(rois,exp_ID,Tseries_folder,save_fig = False):
     """
@@ -414,8 +419,8 @@ def plot_conc_trace(rois,exp_ID,Tseries_folder,save_fig = False):
     fig.suptitle(f'Trial average concatenated response') 
 
     for r, ax in enumerate(axes):
-        time_trace = np.linspace(0, len(roi.int_conc_trace)/roi.int_rate, num =len(roi.int_conc_trace))
         roi = rois[r]
+        time_trace = np.linspace(0, len(roi.int_conc_trace)/roi.int_rate, num =len(roi.int_conc_trace))
         color = 'tab:blue'
         ax.plot(time_trace,roi.int_conc_trace,label='response',color=color)
         ax.set_title(f'ROI #{r}')
