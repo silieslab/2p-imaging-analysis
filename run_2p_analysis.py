@@ -75,9 +75,10 @@ def data_folder(dataFolder):
     return analysis_params, dataFolder, save_data 
 
 #For debugging
-#analysis_params, dataFolder, save_data  = data_folder(r'D:\2pData Ultima')
+analysis_params, dataFolder, save_data  = data_folder(r'D:\Two-Photon-Data-Ultima')
+main_2p_imaging_analysis(analysis_params, dataFolder, save_data)
 
-#%% Running code
+#%% Running code from terminal (typing: "python run_2p_analysis.py data_folder D:\Two-Photon-Data-Ultima")
 if __name__ == "__main__":
     analysis_params, dataFolder, save_data  =  globals()[sys.argv[1]](sys.argv[2]) # Makes possible to call the data_folder() function in the command line giving a function input
     #analysis_params, dataFolder, save_data  = data_folder()
