@@ -1,5 +1,5 @@
 # 2p-imaging-analysis
-Basic analysis for calcium imaging in Python
+Basic analysis for calcium imaging in Python in Silies lab.
 
 
 COMPUTER INSTALLATIONS:
